@@ -2,15 +2,13 @@
 import streamlit as st
 from google import genai
 import os
-import datetime # ★追加：日付・時刻処理に必要
+import datetime # 日付・時刻処理に必要
 
 # ----------------------------------------------------
-# 履歴機能のためのセッションステートの初期化 ★配置修正：最上部に移動★
+# 履歴機能のためのセッションステートの初期化 (配置修正：最上部に移動済み)
 # ----------------------------------------------------
-# これにより、st.session_state.historyが確実に存在することが保証されます。
 if 'history' not in st.session_state:
     st.session_state['history'] = [] 
-
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
 # ----------------------------------------------------
@@ -20,13 +18,13 @@ st.markdown("---")
 st.markdown("**ネガティブな出来事を書き込み、AIの力で学びと行動案に変換します。**")
 
 # ----------------------------------------------------
-# Gemini APIクライアントの初期化 (省略せず、元のコードをそのまま使用)
+# Gemini APIクライアントの初期化 (元のコードを使用)
 # ----------------------------------------------------
 try:
     API_KEY = st.secrets["tool"]["GEMINI_API_KEY"] 
     client = genai.Client(api_key=API_KEY)
 except KeyError:
-    st.error("APIクライアントの初期化に失敗しました。Streamlit Cloudのシークレット設定を確認してください。")
+    st.error("APIクライアントの初期化に失敗しました。シークレット設定を確認してください。")
     st.stop()
 except Exception as e:
     st.error(f"APIクライアントの初期化に失敗しました。エラー: {e}")
@@ -65,6 +63,13 @@ def reframe_negative_emotion(negative_text):
         return f"Gemini API実行エラーが発生しました: {e}"
 
 # ----------------------------------------------------
+# 【★修正・追加点★】リセット処理用の関数を定義
+# ----------------------------------------------------
+def reset_input():
+    # text_areaに設定したキーの値を空にすることで、入力内容をクリアする
+    st.session_state.negative_input_key = ""
+
+# ----------------------------------------------------
 # ユーザーインターフェース (UI)
 # ----------------------------------------------------
 
@@ -73,7 +78,7 @@ negative_input = st.text_area(
     "今日のネガティブな出来事を、そのままの気持ちで書き出してください。", 
     height=200,
     placeholder="例：面接で年齢の懸念を突っ込まれて、自信を失いそうになった。今日のCWのテストライティングは不採用だった。",
-    key="negative_input_key" # ★修正・追加点：リセット機能のためにkeyを追加★
+    key="negative_input_key" # リセット機能のためにkeyを追加
 )
 
 # 変換ボタンとリセットボタンを横並びにする
@@ -87,7 +92,7 @@ with col1:
                 # 1. コア関数を呼び出し
                 converted_result = reframe_negative_emotion(negative_input)
 
-                # 2. 履歴データの作成・保存 ★修正・追加点★
+                # 2. 履歴データの作成・保存
                 new_entry = {
                     "timestamp": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
                     "negative": negative_input,
@@ -103,13 +108,11 @@ with col1:
             st.warning("何か出来事を入力してください。")
 
 with col2:
-    # リセットボタンの追加 ★修正・追加点★
-    if st.button("リセット", key="reset_input_button"):
-        # text_areaに設定したキーの値を空にすることで、入力内容をクリアする
-        st.session_state.negative_input_key = ""
+    # リセットボタン: on_clickで処理を呼び出すことで、APIエラーを回避します ★修正点★
+    st.button("リセット", on_click=reset_input, key="reset_button") 
 
 # ----------------------------------------------------
-# 履歴の表示エリア (UIの最後) ★追加機能★
+# 履歴の表示エリア (UIの最後)
 # ----------------------------------------------------
 st.markdown("---")
 st.subheader("📚 過去のポジティブ変換日記")
