@@ -3,8 +3,7 @@ import streamlit as st
 from google import genai
 import os
 import datetime 
-import pytz 
-from streamlit_extras.st_copy_to_clipboard import st_copy_to_clipboard # ★最終確定版：ワンクリックコピー機能★
+import pytz # JST対応のため追加
 
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
@@ -12,7 +11,7 @@ from streamlit_extras.st_copy_to_clipboard import st_copy_to_clipboard # ★最�
 if 'history' not in st.session_state:
     st.session_state['history'] = [] 
 if 'converted_text' not in st.session_state:
-    st.session_state['converted_text'] = "" 
+    st.session_state['converted_text'] = "" # コピペエリア表示用
 
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
@@ -38,6 +37,7 @@ except Exception as e:
 # 感情をポジティブに変換する関数 (コア機能)
 # ----------------------------------------------------
 def reframe_negative_emotion(negative_text):
+    # (省略：関数定義の内容は変更なし)
     system_prompt = """
     あなたは、ユーザーの精神的安全性を高めるための優秀なAIメンターです。
     ユーザーが入力したネガティブな感情や出来事に対し、以下の厳格な3つの形式で分析し、ポジティブな再構築をしてください。
@@ -72,6 +72,7 @@ def reframe_negative_emotion(negative_text):
 # ----------------------------------------------------
 def reset_input():
     st.session_state.negative_input_key = ""
+    # リセット時、変換結果の表示エリアもクリアする
     st.session_state.converted_text = "" 
 
 # ----------------------------------------------------
@@ -124,17 +125,14 @@ st.markdown("---")
 if st.session_state.converted_text:
     st.subheader("🎉 Reframe 完了！安心の一歩")
     
-    converted_result = st.session_state.converted_text
+    # ★追加：コピペしやすい st.text_area で表示★
     st.text_area(
-        "📝 変換結果",
-        value=converted_result,
-        height=300,
-        label_visibility="collapsed" # ラベル非表示
+        "📝 変換結果（ここから全選択/コピーしやすいです）",
+        value=st.session_state.converted_text,
+        height=300
     )
-    
-    # ★追加：ワンクリックコピーボタン★
-    st_copy_to_clipboard(converted_result, "👆 変換結果をクリップボードにコピー") 
-    
+    # コピーボタン（現在はユーザーにCtrl+Cを促す）
+    st.caption("※コピーするには、上のエリアを選択後、Ctrl+C (Cmd+C) を押してください。")
     st.markdown("---")
 
 
