@@ -38,7 +38,7 @@ except Exception as e:
 # 感情をポジティブに変換する関数 (コア機能) ★修正済み★
 # ----------------------------------------------------
 def reframe_negative_emotion(negative_text):
-    # AIが**1.**の形式で太字を出力するように指示
+    # AIの出力形式は太字を維持し、Python側で強制削除
     system_prompt = """
     あなたは、ユーザーの精神的安全性を高めるための優秀なAIメンターです。
     ユーザーが入力したネガティブな感情や出来事に対し、以下の厳格な3つの形式で分析し、ポジティブな再構築をしてください。
@@ -63,8 +63,8 @@ def reframe_negative_emotion(negative_text):
                 {"role": "user", "parts": [{"text": system_prompt + "\n\n分析対象の出来事:\n" + negative_text}]}
             ]
         )
-        # ★最重要修正点：AIからの出力を強制的にクリーンアップ（### を削除）★
-        cleaned_text = response.text.replace("### ", "").replace("###", "")
+        # ★最終修正点：AIからの出力を強制的にクリーンアップ（### と ** を削除）★
+        cleaned_text = response.text.replace("### ", "").replace("###", "").replace("**", "")
         return cleaned_text
         
     except Exception as e:
@@ -97,7 +97,7 @@ with col1:
     if st.button("ポジティブに変換する！", type="primary"):
         if negative_input:
             with st.spinner("思考を整理し、ポジティブな側面を抽出中..."):
-                # 1. コア関数を呼び出し（ここで###が削除される）
+                # 1. コア関数を呼び出し（ここで###と**が削除される）
                 converted_result = reframe_negative_emotion(negative_input)
 
                 # 2. 履歴データの作成・保存 (JST対応)
@@ -117,7 +117,6 @@ with col1:
             st.warning("何か出来事を入力してください。")
 
 with col2:
-    # リセットボタン: on_clickで処理を呼び出すことで、APIエラーを回避
     st.button("リセット", on_click=reset_input, key="reset_button") 
 
 # ----------------------------------------------------
@@ -125,7 +124,6 @@ with col2:
 # ----------------------------------------------------
 st.markdown("---")
 if st.session_state.converted_text:
-    # 最新の記録（過去の記録の形式）で表示
     st.subheader("🎉 Reframe 完了！安心の一歩")
     
     latest_entry = st.session_state.history[0] 
@@ -133,7 +131,7 @@ if st.session_state.converted_text:
     st.caption(f"🗓️ 変換日時: {latest_entry['timestamp']}")
     st.code(f"ネガティブ: {latest_entry['negative']}", language='text') 
     st.markdown("**変換結果:**")
-    st.markdown(latest_entry['positive_reframe']) 
+    st.markdown(latest_entry['positive_reframe']) # 普通のテキストサイズで表示される
     
     st.caption("✨ **コピーのヒント:** 結果をコピーしたい場合は、履歴エリアのテキストを選択してコピーしてください。")
     st.markdown("---")
@@ -145,13 +143,10 @@ if st.session_state.converted_text:
 st.subheader("📚 過去のポジティブ変換日記")
 
 if st.session_state.history:
-    # 最新の要素は上のセクションで表示済みのため、2番目以降を表示
     for entry in st.session_state.history[1:]: 
         
-        # 変換日時を表示
         st.caption(f"🗓️ 変換日時: {entry['timestamp']}")
         
-        # 過去の記録（Reframe完了の形式）で表示
         st.text_area(
             f"過去の変換 ({entry['timestamp']})",
             value=entry['positive_reframe'],
