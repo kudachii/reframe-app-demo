@@ -18,12 +18,15 @@ st.markdown("**ネガティブな出来事を書き込み、AIの力で学びと
 # Colabでのテスト実行時は、ここでキーを直接設定することも可能ですが、
 # セキュリティ上、環境変数(st.secrets)を使うのがベストです。
 try:
-    # 環境変数 'GEMINI_API_KEY' が設定されていることを前提とします
-    client = genai.Client()
-except Exception as e:
-    st.error("APIクライアントの初期化に失敗しました。Gemini APIキーが正しく設定されているか確認してください。")
+    # st.secrets['tool']['GEMINI_API_KEY'] からキーを直接取得する
+    API_KEY = st.secrets["tool"]["GEMINI_API_KEY"]
+    client = genai.Client(api_key=API_KEY)
+except KeyError:
+    st.error("APIクライアントの初期化に失敗しました。Streamlit Cloudのシークレット設定（[tool]セクション）を確認してください。")
     st.stop()
-    
+except Exception as e:
+    st.error(f"APIクライアントの初期化に失敗しました。エラー: {e}")
+    st.stop()    
 # ----------------------------------------------------
 # 感情をポジティブに変換する関数 (コア機能)
 # ----------------------------------------------------
