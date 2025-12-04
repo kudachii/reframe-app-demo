@@ -4,7 +4,7 @@ from google import genai
 import os
 import datetime 
 import pytz 
-# ★外部ライブラリのインポートは削除済み★
+# 外部ライブラリのインポートは削除済み
 
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
@@ -26,6 +26,7 @@ st.markdown("**ネガティブな出来事を書き込み、AIの力で学びと
 # Gemini APIクライアントの初期化 (省略)
 # ----------------------------------------------------
 try:
+    # 環境変数からAPIキーを取得
     API_KEY = st.secrets["tool"]["GEMINI_API_KEY"] 
     client = genai.Client(api_key=API_KEY)
 except KeyError:
@@ -38,18 +39,19 @@ except Exception as e:
 # 感情をポジティブに変換する関数 (コア機能)
 # ----------------------------------------------------
 def reframe_negative_emotion(negative_text):
+    # ★修正点：システムプロンプトの出力を###から太字（**）に変更★
     system_prompt = """
     あなたは、ユーザーの精神的安全性を高めるための優秀なAIメンターです。
     ユーザーが入力したネガティブな感情や出来事に対し、以下の厳格な3つの形式で分析し、ポジティブな再構築をしてください。
     
     【出力形式】
-    ### 1. 事実の客観視
+    **1. 事実の客観視**
     (事実のみを簡潔に要約)
     
-    ### 2. ポジティブな側面抽出
+    **2. ポジティブな側面抽出**
     (この出来事から得られた成長、学び、改善点を抽出)
     
-    ### 3. 今後の具体的な行動案（Next Step）
+    **3. 今後の具体的な行動案（Next Step）**
     (小さく、すぐ実行できる次のアクションを一つ提案)
     
     必ずこの3つのMarkdown形式の要素を出力し、それ以外の説明や挨拶は一切含めないでください。
@@ -115,51 +117,45 @@ with col2:
     st.button("リセット", on_click=reset_input, key="reset_button") 
 
 # ----------------------------------------------------
-# 変換結果とコピペエリア (UIの続き) ★修正：過去の記録の形式を適用★
+# 変換結果とコピペエリア (UIの続き)
 # ----------------------------------------------------
 st.markdown("---")
 if st.session_state.converted_text:
-    # 過去の記録と同じ形式で表示
+    # 過去の記録と同じ形式で表示（日時、コード、Markdown）
     st.subheader("🎉 Reframe 完了！安心の一歩")
     
-    # 履歴配列から最新のエントリを取得（または st.session_stateから取得）
-    # ここでは便宜上、履歴配列の最新要素を使います
     latest_entry = st.session_state.history[0] 
     
-    # 1. 変換日時
     st.caption(f"🗓️ 変換日時: {latest_entry['timestamp']}")
-    
-    # 2. ネガティブ内容
     st.code(f"ネガティブ: {latest_entry['negative']}", language='text') 
-    
-    # 3. 変換結果
     st.markdown("**変換結果:**")
-    st.markdown(latest_entry['positive_reframe']) # Markdown形式で結果を表示
+    st.markdown(latest_entry['positive_reframe']) # 修正された形式で結果を表示
     
     st.caption("✨ **コピーのヒント:** 結果をコピーしたい場合は、履歴エリアのテキストを選択してコピーしてください。")
     st.markdown("---")
 
 
 # ----------------------------------------------------
-# 履歴の表示エリア (UIの最後) ★修正：Reframe完了の形式を適用★
+# 履歴の表示エリア (UIの最後) ★修正：日時表示を追加★
 # ----------------------------------------------------
 st.subheader("📚 過去のポジティブ変換日記")
 
 if st.session_state.history:
     # 最新の要素は上のセクションで表示済みのため、2番目以降を表示
     for entry in st.session_state.history[1:]: 
-        # Reframe完了の形式（st.text_areaを使う形式）を適用
-        st.subheader("過去の記録") # 形式を合わせるためのダミーヘッダー
+        
+        # ★修正点：変換日時をst.captionで表示★
+        st.caption(f"🗓️ 変換日時: {entry['timestamp']}")
         
         # コピペしやすい st.text_area で表示
         st.text_area(
             f"過去の変換 ({entry['timestamp']})",
-            value=entry['positive_reframe'], # 変換結果のみを表示
+            value=entry['positive_reframe'],
             height=300,
             label_visibility="collapsed",
-            key=f"history_area_{entry['timestamp']}" # キーを動的に設定
+            key=f"history_area_{entry['timestamp']}"
         )
-        st.caption(f"🗓️ 元のネガティブ内容: {entry['negative']}")
+        st.caption(f"元のネガティブ内容: {entry['negative']}")
         st.caption("✨ **コピーのヒント:** 上のエリアをクリックし、Ctrl+A → Ctrl+C で素早くコピーできます。")
         st.markdown("---")
 
