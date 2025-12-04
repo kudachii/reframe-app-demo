@@ -3,7 +3,8 @@ import streamlit as st
 from google import genai
 import os
 import datetime 
-import pytz # JST対応のため追加
+import pytz 
+# ★外部ライブラリのインポートは削除しました★
 
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
@@ -11,7 +12,7 @@ import pytz # JST対応のため追加
 if 'history' not in st.session_state:
     st.session_state['history'] = [] 
 if 'converted_text' not in st.session_state:
-    st.session_state['converted_text'] = "" # コピペエリア表示用
+    st.session_state['converted_text'] = "" 
 
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
@@ -37,7 +38,6 @@ except Exception as e:
 # 感情をポジティブに変換する関数 (コア機能)
 # ----------------------------------------------------
 def reframe_negative_emotion(negative_text):
-    # (省略：関数定義の内容は変更なし)
     system_prompt = """
     あなたは、ユーザーの精神的安全性を高めるための優秀なAIメンターです。
     ユーザーが入力したネガティブな感情や出来事に対し、以下の厳格な3つの形式で分析し、ポジティブな再構築をしてください。
@@ -72,7 +72,6 @@ def reframe_negative_emotion(negative_text):
 # ----------------------------------------------------
 def reset_input():
     st.session_state.negative_input_key = ""
-    # リセット時、変換結果の表示エリアもクリアする
     st.session_state.converted_text = "" 
 
 # ----------------------------------------------------
@@ -125,14 +124,17 @@ st.markdown("---")
 if st.session_state.converted_text:
     st.subheader("🎉 Reframe 完了！安心の一歩")
     
-    # ★追加：コピペしやすい st.text_area で表示★
+    converted_result = st.session_state.converted_text
     st.text_area(
         "📝 変換結果（ここから全選択/コピーしやすいです）",
-        value=st.session_state.converted_text,
-        height=300
+        value=converted_result,
+        height=300,
+        label_visibility="collapsed"
     )
-    # コピーボタン（現在はユーザーにCtrl+Cを促す）
-    st.caption("※コピーするには、上のエリアを選択後、Ctrl+C (Cmd+C) を押してください。")
+    
+    # ★追加：コピペ操作の説明 (Ctrl+A, Ctrl+Cでコピー)★
+    st.caption("✨ **コピーのヒント:** 上のエリアをクリックし、キーボードの **Ctrl+A** → **Ctrl+C** (Macは Cmd+A → Cmd+C) で素早くコピーできます。")
+    
     st.markdown("---")
 
 
