@@ -2,13 +2,15 @@
 import streamlit as st
 from google import genai
 import os
-import datetime # 日付・時刻処理に必要
+import datetime 
+import pytz # ★JST対応のため追加★
 
 # ----------------------------------------------------
-# 履歴機能のためのセッションステートの初期化 (配置修正：最上部に移動済み)
+# 履歴機能のためのセッションステートの初期化 
 # ----------------------------------------------------
 if 'history' not in st.session_state:
     st.session_state['history'] = [] 
+
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
 # ----------------------------------------------------
@@ -18,7 +20,7 @@ st.markdown("---")
 st.markdown("**ネガティブな出来事を書き込み、AIの力で学びと行動案に変換します。**")
 
 # ----------------------------------------------------
-# Gemini APIクライアントの初期化 (元のコードを使用)
+# Gemini APIクライアントの初期化 (省略せず、元のコードをそのまま使用)
 # ----------------------------------------------------
 try:
     API_KEY = st.secrets["tool"]["GEMINI_API_KEY"] 
@@ -33,6 +35,7 @@ except Exception as e:
 # 感情をポジティブに変換する関数 (コア機能)
 # ----------------------------------------------------
 def reframe_negative_emotion(negative_text):
+    # (省略：関数定義の内容は変更なし)
     system_prompt = """
     あなたは、ユーザーの精神的安全性を高めるための優秀なAIメンターです。
     ユーザーが入力したネガティブな感情や出来事に対し、以下の厳格な3つの形式で分析し、ポジティブな再構築をしてください。
@@ -63,10 +66,9 @@ def reframe_negative_emotion(negative_text):
         return f"Gemini API実行エラーが発生しました: {e}"
 
 # ----------------------------------------------------
-# 【★修正・追加点★】リセット処理用の関数を定義
+# リセット処理用の関数を定義
 # ----------------------------------------------------
 def reset_input():
-    # text_areaに設定したキーの値を空にすることで、入力内容をクリアする
     st.session_state.negative_input_key = ""
 
 # ----------------------------------------------------
@@ -78,7 +80,7 @@ negative_input = st.text_area(
     "今日のネガティブな出来事を、そのままの気持ちで書き出してください。", 
     height=200,
     placeholder="例：面接で年齢の懸念を突っ込まれて、自信を失いそうになった。今日のCWのテストライティングは不採用だった。",
-    key="negative_input_key" # リセット機能のためにkeyを追加
+    key="negative_input_key" 
 )
 
 # 変換ボタンとリセットボタンを横並びにする
@@ -93,8 +95,12 @@ with col1:
                 converted_result = reframe_negative_emotion(negative_input)
 
                 # 2. 履歴データの作成・保存
+                # ★修正点：JSTで時刻を取得★
+                jst = pytz.timezone('Asia/Tokyo')
+                now_jst = datetime.datetime.now(jst)
+                
                 new_entry = {
-                    "timestamp": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
+                    "timestamp": now_jst.strftime("%Y/%m/%d %H:%M"),
                     "negative": negative_input,
                     "positive_reframe": converted_result
                 }
@@ -108,7 +114,7 @@ with col1:
             st.warning("何か出来事を入力してください。")
 
 with col2:
-    # リセットボタン: on_clickで処理を呼び出すことで、APIエラーを回避します ★修正点★
+    # リセットボタン: on_clickで処理を呼び出すことで、APIエラーを回避します
     st.button("リセット", on_click=reset_input, key="reset_button") 
 
 # ----------------------------------------------------
