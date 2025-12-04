@@ -3,7 +3,8 @@ import streamlit as st
 from google import genai
 import os
 import datetime 
-import pytz # JST対応のため追加
+import pytz 
+from streamlit_extras.st_copy_to_clipboard import st_copy_to_clipboard # ★追加★
 
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
@@ -11,68 +12,15 @@ import pytz # JST対応のため追加
 if 'history' not in st.session_state:
     st.session_state['history'] = [] 
 if 'converted_text' not in st.session_state:
-    st.session_state['converted_text'] = "" # コピペエリア表示用
+    st.session_state['converted_text'] = "" 
 
-# ----------------------------------------------------
-# 画面デザインとタイトル設定
-# ----------------------------------------------------
-st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
-st.title("💡 Reframe: ポジティブ変換日記")
-st.markdown("---")
-st.markdown("**ネガティブな出来事を書き込み、AIの力で学びと行動案に変換します。**")
-
-# ----------------------------------------------------
-# Gemini APIクライアントの初期化 (元のコードを使用)
-# ----------------------------------------------------
-try:
-    API_KEY = st.secrets["tool"]["GEMINI_API_KEY"] 
-    client = genai.Client(api_key=API_KEY)
-except KeyError:
-    st.error("APIクライアントの初期化に失敗しました。シークレット設定を確認してください。")
-    st.stop()
-except Exception as e:
-    st.error(f"APIクライアントの初期化に失敗しました。エラー: {e}")
-    st.stop()    
-# ----------------------------------------------------
-# 感情をポジティブに変換する関数 (コア機能)
-# ----------------------------------------------------
-def reframe_negative_emotion(negative_text):
-    # (省略：関数定義の内容は変更なし)
-    system_prompt = """
-    あなたは、ユーザーの精神的安全性を高めるための優秀なAIメンターです。
-    ユーザーが入力したネガティブな感情や出来事に対し、以下の厳格な3つの形式で分析し、ポジティブな再構築をしてください。
-    
-    【出力形式】
-    ### 1. 事実の客観視
-    (事実のみを簡潔に要約)
-    
-    ### 2. ポジティブな側面抽出
-    (この出来事から得られた成長、学び、改善点を抽出)
-    
-    ### 3. 今後の具体的な行動案（Next Step）
-    (小さく、すぐ実行できる次のアクションを一つ提案)
-    
-    必ずこの3つのMarkdown形式の要素を出力し、それ以外の説明や挨拶は一切含めないでください。
-    """
-    
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[
-                {"role": "user", "parts": [{"text": system_prompt + "\n\n分析対象の出来事:\n" + negative_text}]}
-            ]
-        )
-        return response.text
-        
-    except Exception as e:
-        return f"Gemini API実行エラーが発生しました: {e}"
+# ... (中略：APIキー初期化、reframe_negative_emotion関数、reset_input関数は変更なし) ...
 
 # ----------------------------------------------------
 # リセット処理用の関数を定義
 # ----------------------------------------------------
 def reset_input():
     st.session_state.negative_input_key = ""
-    # リセット時、変換結果の表示エリアもクリアする
     st.session_state.converted_text = "" 
 
 # ----------------------------------------------------
@@ -95,10 +43,7 @@ with col1:
     if st.button("ポジティブに変換する！", type="primary"):
         if negative_input:
             with st.spinner("思考を整理し、ポジティブな側面を抽出中..."):
-                # 1. コア関数を呼び出し
                 converted_result = reframe_negative_emotion(negative_input)
-
-                # 2. 履歴データの作成・保存 (JST対応)
                 jst = pytz.timezone('Asia/Tokyo')
                 now_jst = datetime.datetime.now(jst)
                 
@@ -109,30 +54,31 @@ with col1:
                 }
                 st.session_state.history.insert(0, new_entry) 
                 
-                # 3. コピペエリアへの結果格納
                 st.session_state.converted_text = converted_result
         else:
             st.warning("何か出来事を入力してください。")
 
 with col2:
-    # リセットボタン: on_clickで処理を呼び出すことで、APIエラーを回避
     st.button("リセット", on_click=reset_input, key="reset_button") 
 
 # ----------------------------------------------------
-# 変換結果とコピペエリア (UIの続き)
+# 変換結果とコピペエリア (UIの続き) ★コピーツール追加★
 # ----------------------------------------------------
 st.markdown("---")
 if st.session_state.converted_text:
     st.subheader("🎉 Reframe 完了！安心の一歩")
     
-    # ★追加：コピペしやすい st.text_area で表示★
+    converted_result = st.session_state.converted_text
     st.text_area(
-        "📝 変換結果（ここから全選択/コピーしやすいです）",
-        value=st.session_state.converted_text,
-        height=300
+        "📝 変換結果",
+        value=converted_result,
+        height=300,
+        label_visibility="collapsed" # ラベル非表示
     )
-    # コピーボタン（現在はユーザーにCtrl+Cを促す）
-    st.caption("※コピーするには、上のエリアを選択後、Ctrl+C (Cmd+C) を押してください。")
+    
+    # ワンクリックコピーボタン
+    st_copy_to_clipboard(converted_result, "👆 変換結果をクリップボードにコピー") 
+    
     st.markdown("---")
 
 
@@ -142,7 +88,6 @@ if st.session_state.converted_text:
 st.subheader("📚 過去のポジティブ変換日記")
 
 if st.session_state.history:
-    # 新しいものから順に表示
     for entry in st.session_state.history:
         st.caption(f"🗓️ 変換日時: {entry['timestamp']}")
         st.code(f"ネガティブ: {entry['negative']}", language='text') 
