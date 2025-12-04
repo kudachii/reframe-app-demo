@@ -2,6 +2,7 @@
 import streamlit as st
 from google import genai
 import os
+import datetime # ★ datetimeモジュールをimportしてください
 
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
@@ -75,14 +76,38 @@ negative_input = st.text_area(
 if st.button("ポジティブに変換する！", type="primary"):
     if negative_input:
         with st.spinner("思考を整理し、ポジティブな側面を抽出中..."):
-            # コア関数を呼び出し
+            # 1.コア関数を呼び出し
             converted_result = reframe_negative_emotion(negative_input)
+
+            # 2. 履歴データの作成・保存 【★ここを追記/修正★】
+            new_entry = {
+                "timestamp": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
+                "negative": negative_input,
+                "positive_reframe": converted_result
+            }
+            st.session_state.history.insert(0, new_entry)
             
-            # 結果表示
+            # 3.結果表示
             st.markdown("---")
             st.subheader("🎉 Reframe 完了！安心の一歩")
             st.markdown(converted_result)
     else:
         st.warning("何か出来事を入力してください。")
+
+# ----------------------------------------------------
+# 履歴の表示エリア (UIの最後の方に追記)
+# ----------------------------------------------------
+st.markdown("---")
+st.subheader("📚 過去のポジティブ変換日記")
+
+if st.session_state.history:
+    for entry in st.session_state.history:
+        st.caption(f"🗓️ 変換日時: {entry['timestamp']}")
+        st.code(f"ネガティブ: {entry['negative']}", language='text')
+        st.markdown("**変換結果:**")
+        st.markdown(entry['positive_reframe']) 
+        st.markdown("---")
+else:
+    st.write("まだ変換記録はありません。最初の出来事を書き込んでみましょう！")
 
 # (注: Colabでこのコードを実行する場合、ローカルでStreamlitを立ち上げる必要があります。)
