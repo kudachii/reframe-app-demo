@@ -10,8 +10,9 @@ import pytz
 # ----------------------------------------------------
 if 'history' not in st.session_state:
     st.session_state['history'] = [] 
-if 'converted_text' not in st.session_state:
-    st.session_state['converted_text'] = "" 
+# ★変更点: 一時的なレビュー用エントリをNoneで初期化★
+if 'current_review_entry' not in st.session_state:
+    st.session_state['current_review_entry'] = None 
 
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
@@ -35,7 +36,7 @@ except Exception as e:
     st.stop()    
 
 # ----------------------------------------------------
-# 感情をポジティブに変換する関数 (コア機能) ★出力形式を辞書に変更★
+# 感情をポジティブに変換する関数 (コア機能) 
 # ----------------------------------------------------
 def reframe_negative_emotion(negative_text):
     system_prompt = """
@@ -77,7 +78,6 @@ def reframe_negative_emotion(negative_text):
             }
 
         except Exception:
-            # 分割に失敗した場合は、エラーとして処理
             return {"fact": "分析エラー", "positive": raw_text, "action": "分割失敗: AIの出力形式をご確認ください"}
 
     except Exception as e:
@@ -88,16 +88,28 @@ def reframe_negative_emotion(negative_text):
 # ----------------------------------------------------
 def reset_input():
     st.session_state.negative_input_key = ""
-    st.session_state.converted_text = "" 
+    st.session_state.current_review_entry = None
+
+# ----------------------------------------------------
+# 新機能: 保存処理用の関数を定義
+# ----------------------------------------------------
+def save_entry():
+    if st.session_state.current_review_entry:
+        # 履歴の先頭に保存
+        st.session_state.history.insert(0, st.session_state.current_review_entry)
+        # 一時レビューエリアをクリア
+        st.session_state.current_review_entry = None
+        # ユーザーに保存が完了したことを伝える
+        st.success("✅ 日記が保存されました！お疲れ様でした。")
 
 # ----------------------------------------------------
 # ユーザーインターフェース (UI)
 # ----------------------------------------------------
 
-# 日記入力エリアのタイトル
+# 日記入力エリアのタイトル (デザイン改善済み)
 st.markdown("#### 📝 あなたのネガティブな気持ちを、安心してそのまま書き出してください。")
 
-# テキスト入力エリア
+# テキスト入力エリア (デザイン改善済み)
 negative_input = st.text_area(
     "（ここは誰にも見られません。心に浮かんだことを自由に。）", 
     height=200,
@@ -109,7 +121,7 @@ negative_input = st.text_area(
 col1, col2 = st.columns([0.7, 0.3]) 
 
 with col1:
-    # 変換ボタン (メインアクションとして強調)
+    # 変換ボタン (デザイン改善済み/役割変更)
     if st.button("✨ **ポジティブに変換する！**", type="primary"):
         if negative_input:
             with st.spinner("思考を整理し、ポジティブな側面を抽出中..."):
@@ -118,66 +130,76 @@ with col1:
                 jst = pytz.timezone('Asia/Tokyo')
                 now_jst = datetime.datetime.now(jst)
                 
-                # 履歴には元のnegativeと、構造化されたpositive_reframe（辞書）を保存
-                new_entry = {
+                # 結果を一時変数に格納
+                st.session_state.current_review_entry = {
                     "timestamp": now_jst.strftime("%Y/%m/%d %H:%M"),
                     "negative": negative_input,
                     "positive_reframe": converted_result
                 }
-                st.session_state.history.insert(0, new_entry) 
-                
-                st.session_state.converted_text = converted_result
+                # 変換後、入力エリアをクリア
+                st.session_state.negative_input_key = ""
+
         else:
             st.warning("⚠️ 何か出来事を入力してください。あなたの心が待っています。")
 
 with col2:
-    # リセットボタン 
+    # リセットボタン (デザイン改善済み) 
     st.button("↩️ もう一度書き直す", on_click=reset_input, key="reset_button") 
 
 # ----------------------------------------------------
-# 変換結果とコピペエリア (UIの続き) ★3要素を構造化表示★
+# 変換結果レビューエリア (UIの続き)
 # ----------------------------------------------------
 st.markdown("---")
-# 辞書型（dict）の結果が返っていることを確認
-if st.session_state.converted_text and isinstance(st.session_state.converted_text, dict):
-    st.subheader("🎉 Reframe 完了！安心の一歩")
+# 一時レビューエントリがある場合にのみ表示
+if st.session_state.current_review_entry:
     
-    latest_entry = st.session_state.history[0] 
+    review_entry = st.session_state.current_review_entry
     
-    st.caption(f"🗓️ 変換日時: {latest_entry['timestamp']}")
-    st.code(f"元の出来事: {latest_entry['negative']}", language='text') 
+    st.subheader("🧐 変換結果のレビューと保存")
     
-    # --- 3要素の構造化表示 ---
-
-    # 1. 事実の客観視 (クールダウン)
+    # 変換結果を構造化表示
+    st.caption(f"🗓️ 変換日時: {review_entry['timestamp']}")
+    st.code(f"元の出来事: {review_entry['negative']}", language='text') 
+    
+    st.markdown("#### **✅ 変換結果（あなたの学びと次の行動）:**")
+    
+    # 1. 事実の客観視 (クールダウン) - デザイン改善済み
     st.markdown("##### 🧊 1. 事実の客観視（クールダウン）")
-    st.info(latest_entry['positive_reframe']['fact'])
+    st.info(review_entry['positive_reframe']['fact'])
     
-    # 2. ポジティブな側面抽出 (学びと成長)
+    # 2. ポジティブな側面抽出 (学びと成長) - デザイン改善済み
     st.markdown("##### 🌱 2. ポジティブな側面抽出（学びと成長）")
-    st.success(latest_entry['positive_reframe']['positive'])
+    st.success(review_entry['positive_reframe']['positive'])
     
-    # 3. 今後の具体的な行動案 (ネクストステップ)
+    # 3. 今後の具体的な行動案 (ネクストステップ) - デザイン改善済み
     st.markdown("##### 👣 3. 今後の具体的な行動案（Next Step）")
-    st.warning(latest_entry['positive_reframe']['action']) 
+    st.warning(review_entry['positive_reframe']['action']) 
     
-    # --- 構造化表示ここまで ---
-    
-    st.caption("✨ **ヒント:** 結果をコピーしたい場合は、各ボックスのテキストを選択してコピーしてください。")
+    # --- 保存ボタンの設置 ---
+    st.markdown("---")
+    # ★新規ボタン: 保存ボタン★
+    st.button(
+        "✅ 日記を確定・保存する", 
+        on_click=save_entry, 
+        type="secondary",
+        key="save_button"
+    )
+    st.caption("※このボタンを押すと、この記録が過去の履歴に残ります。")
     st.markdown("---")
 
 
 # ----------------------------------------------------
 # 履歴の表示エリア (UIの最後)
 # ----------------------------------------------------
-st.subheader("📚 過去のポジティブ変換日記")
+st.subheader("📚 過去のポジティブ変換日記（保存済み）")
 
 if st.session_state.history:
-    for entry in st.session_state.history[1:]: 
+    # 保存された履歴全体をループ
+    for entry in st.session_state.history: 
         
         st.caption(f"🗓️ 変換日時: {entry['timestamp']}")
         
-        # 履歴表示エリアは、構造化された辞書の内容を結合して表示する必要がある
+        # 履歴表示エリアは、構造化された辞書の内容を結合して表示
         history_value = (
             f"🧊 1. 事実の客観視: {entry['positive_reframe']['fact']}\n\n"
             f"🌱 2. ポジティブな側面抽出: {entry['positive_reframe']['positive']}\n\n"
@@ -196,4 +218,4 @@ if st.session_state.history:
         st.markdown("---")
 
 else:
-    st.write("まだ変換記録はありません。最初の出来事を書き込んでみましょう！")
+    st.write("まだ保存された記録はありません。最初の出来事を変換して、保存してみましょう！")
