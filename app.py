@@ -10,6 +10,7 @@ import pytz
 # ----------------------------------------------------
 if 'history' not in st.session_state:
     st.session_state['history'] = [] 
+# 一時的なレビュー用エントリをNoneで初期化
 if 'current_review_entry' not in st.session_state:
     st.session_state['current_review_entry'] = None 
 
@@ -36,6 +37,7 @@ except Exception as e:
 
 # ----------------------------------------------------
 # 感情をポジティブに変換する関数 (コア機能) 
+# ★修正点: システムプロンプト内の口調指示を変更★
 # ----------------------------------------------------
 def reframe_negative_emotion(negative_text):
     system_prompt = """
@@ -44,7 +46,7 @@ def reframe_negative_emotion(negative_text):
     
     【出力形式】
     1. 事実の客観視: (事実のみを簡潔に要約)
-    2. ポジティブな側面抽出: (この出来事から得られた成長、学び、改善点を抽出)
+    2. ポジティブな側面抽出: (この出来事からあなたが優しさや強さを得た点、成長できた点を抽出します。ユーザーの頑張りや努力を認め、共感し、励ますような、温かく寄り添う口調で前向きな言葉を使って表現してください。)
     3. 今後の具体的な行動案（Next Step）: (小さく、すぐ実行できる次のアクションを一つ提案)
     
     必ずこの3つの要素を「1.」「2.」「3.」で始まる形式で出力し、それ以外の説明や挨拶は一切含めないでください。
@@ -83,7 +85,7 @@ def reframe_negative_emotion(negative_text):
         return {"fact": "APIエラー", "positive": f"Gemini API実行エラーが発生しました: {e}", "action": "ー"}
 
 # ----------------------------------------------------
-# リセット処理用の関数を定義 ★修正点: 入力クリアのみに限定★
+# リセット処理用の関数を定義
 # ----------------------------------------------------
 def clear_input_only():
     # 入力エリアのクリア
@@ -111,7 +113,7 @@ def discard_entry():
     st.toast("🗑️ 変換結果は破棄されました。新しい日記をどうぞ。", icon='✍️')
 
 # ----------------------------------------------------
-# ★新規追加: 変換ボタンのコールバック関数★
+# 変換ボタンのコールバック関数
 # ----------------------------------------------------
 def on_convert_click(input_value):
     if not input_value:
@@ -131,7 +133,7 @@ def on_convert_click(input_value):
             "positive_reframe": converted_result
         }
         
-        # ★エラー回避修正: 変換が完了したら、入力エリアをクリアする関数を呼び出す★
+        # 変換完了後に入力エリアをクリア
         clear_input_only() 
 
 # ----------------------------------------------------
@@ -153,7 +155,7 @@ negative_input = st.text_area(
 col1, col2 = st.columns([0.7, 0.3]) 
 
 with col1:
-    # 変換ボタン: コールバック関数を実行し、引数に入力値を渡す
+    # 変換ボタン: コールバック関数を実行
     st.button(
         "✨ **ポジティブに変換する！**", 
         on_click=on_convert_click, 
