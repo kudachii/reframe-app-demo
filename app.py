@@ -10,7 +10,6 @@ import pytz
 # ----------------------------------------------------
 if 'history' not in st.session_state:
     st.session_state['history'] = [] 
-# 一時的なレビュー用エントリをNoneで初期化
 if 'current_review_entry' not in st.session_state:
     st.session_state['current_review_entry'] = None 
 
@@ -62,11 +61,11 @@ def reframe_negative_emotion(negative_text):
         
         # --- AIの出力文字列を3つの要素に分割し、辞書で返す ---
         try:
-            # 1. '2.' で分割し、前半を 'fact'、後半を 'positive' と 'action' に分ける
+            # 1. '2.' で分割
             fact_and_rest = raw_text.split("2. ", 1)
             fact = fact_and_rest[0].strip().replace("1. ", "").replace("**", "")
             
-            # 2. '3.' で分割し、'positive' と 'action' に分ける
+            # 2. '3.' で分割
             positive_and_action = fact_and_rest[1].split("3. ", 1)
             positive = positive_and_action[0].strip().replace("**", "")
             action = positive_and_action[1].strip().replace("**", "")
@@ -84,12 +83,15 @@ def reframe_negative_emotion(negative_text):
         return {"fact": "APIエラー", "positive": f"Gemini API実行エラーが発生しました: {e}", "action": "ー"}
 
 # ----------------------------------------------------
-# リセット処理用の関数を定義
+# リセット処理用の関数を定義 ★修正点: 入力クリアのみに限定★
 # ----------------------------------------------------
-def reset_input():
+def clear_input_only():
     # 入力エリアのクリア
-    st.session_state.negative_input_key = ""
-    # レビューエリアのクリア
+    st.session_state["negative_input_key"] = ""
+
+def reset_input():
+    # 入力とレビューエリアのクリア
+    clear_input_only()
     st.session_state.current_review_entry = None
 
 # ----------------------------------------------------
@@ -97,21 +99,40 @@ def reset_input():
 # ----------------------------------------------------
 def save_entry():
     if st.session_state.current_review_entry:
-        # 履歴の先頭に保存
         st.session_state.history.insert(0, st.session_state.current_review_entry)
-        # 一時レビューエリアをクリア
         st.session_state.current_review_entry = None
-        # ユーザーに保存が完了したことを伝える
         st.toast("✅ 日記が保存されました！", icon='💾')
 
 # ----------------------------------------------------
-# ★新規追加: 破棄処理用の関数を定義★
+# 破棄処理用の関数を定義
 # ----------------------------------------------------
 def discard_entry():
-    # 一時レビューエリアをクリア
     st.session_state.current_review_entry = None
-    # ユーザーに破棄が完了したことを伝える
     st.toast("🗑️ 変換結果は破棄されました。新しい日記をどうぞ。", icon='✍️')
+
+# ----------------------------------------------------
+# ★新規追加: 変換ボタンのコールバック関数★
+# ----------------------------------------------------
+def on_convert_click(input_value):
+    if not input_value:
+        st.warning("⚠️ 何か出来事を入力してください。あなたの心が待っています。")
+        return
+
+    with st.spinner("思考を整理し、ポジティブな側面を抽出中..."):
+        converted_result = reframe_negative_emotion(input_value)
+        
+        jst = pytz.timezone('Asia/Tokyo')
+        now_jst = datetime.datetime.now(jst)
+        
+        # 結果を一時変数に格納
+        st.session_state.current_review_entry = {
+            "timestamp": now_jst.strftime("%Y/%m/%d %H:%M"),
+            "negative": input_value,
+            "positive_reframe": converted_result
+        }
+        
+        # ★エラー回避修正: 変換が完了したら、入力エリアをクリアする関数を呼び出す★
+        clear_input_only() 
 
 # ----------------------------------------------------
 # ユーザーインターフェース (UI)
@@ -132,27 +153,13 @@ negative_input = st.text_area(
 col1, col2 = st.columns([0.7, 0.3]) 
 
 with col1:
-    # 変換ボタン 
-    if st.button("✨ **ポジティブに変換する！**", type="primary"):
-        if negative_input:
-            with st.spinner("思考を整理し、ポジティブな側面を抽出中..."):
-                converted_result = reframe_negative_emotion(negative_input)
-                
-                jst = pytz.timezone('Asia/Tokyo')
-                now_jst = datetime.datetime.now(jst)
-                
-                # 結果を一時変数に格納
-                st.session_state.current_review_entry = {
-                    "timestamp": now_jst.strftime("%Y/%m/%d %H:%M"),
-                    "negative": negative_input,
-                    "positive_reframe": converted_result
-                }
-                
-                # エラー回避のため、キーの値を直接空文字列に設定して入力エリアをクリア
-                st.session_state["negative_input_key"] = "" 
-
-        else:
-            st.warning("⚠️ 何か出来事を入力してください。あなたの心が待っています。")
+    # 変換ボタン: コールバック関数を実行し、引数に入力値を渡す
+    st.button(
+        "✨ **ポジティブに変換する！**", 
+        on_click=on_convert_click, 
+        args=[negative_input], # 入力値を引数として渡す
+        type="primary"
+    )
 
 with col2:
     # リセットボタン 
@@ -162,39 +169,33 @@ with col2:
 # 変換結果レビューエリア (UIの続き)
 # ----------------------------------------------------
 st.markdown("---")
-# 一時レビューエントリがある場合にのみ表示
 if st.session_state.current_review_entry:
     
     review_entry = st.session_state.current_review_entry
     
     st.subheader("🧐 変換結果のレビューと次のステップ")
     
-    # 変換結果を構造化表示
     st.caption(f"🗓️ 変換日時: {review_entry['timestamp']}")
     st.code(f"元の出来事: {review_entry['negative']}", language='text') 
     
     st.markdown("#### **✅ 変換結果（あなたの学びと次の行動）:**")
     
-    # 1. 事実の客観視 (クールダウン) 
+    # 3要素の構造化表示 
     st.markdown("##### 🧊 1. 事実の客観視（クールダウン）")
     st.info(review_entry['positive_reframe']['fact'])
     
-    # 2. ポジティブな側面抽出 (学びと成長) 
     st.markdown("##### 🌱 2. ポジティブな側面抽出（学びと成長）")
     st.success(review_entry['positive_reframe']['positive'])
     
-    # 3. 今後の具体的な行動案 (ネクストステップ) 
     st.markdown("##### 👣 3. 今後の具体的な行動案（Next Step）")
     st.warning(review_entry['positive_reframe']['action']) 
     
-    # --- 保存/破棄ボタンの設置 (修正) ---
+    # --- 保存/破棄ボタンの設置 ---
     st.markdown("---")
     
-    # 2つのボタンを横並びにする
     save_col, discard_col = st.columns([0.5, 0.5])
     
     with save_col:
-        # 保存ボタン (メインアクションとして強調)
         st.button(
             "✅ 日記を確定・保存する", 
             on_click=save_entry, 
@@ -203,7 +204,6 @@ if st.session_state.current_review_entry:
         )
     
     with discard_col:
-        # 破棄ボタン 
         st.button(
             "🗑️ 破棄して次へ", 
             on_click=discard_entry, 
@@ -221,7 +221,6 @@ if st.session_state.current_review_entry:
 st.subheader("📚 過去のポジティブ変換日記（保存済み）")
 
 if st.session_state.history:
-    # 保存された履歴全体をループ
     for entry in st.session_state.history: 
         
         st.caption(f"🗓️ 変換日時: {entry['timestamp']}")
