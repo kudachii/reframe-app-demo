@@ -19,12 +19,20 @@ if 'current_review_entry' not in st.session_state:
 # ----------------------------------------------------
 st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 
-# ******** ★修正箇所★ 画像の追加 ********
-# 注: 画像ファイル「unnamed.jpg」がStreamlitアプリの実行ディレクトリにあることを確認してください。
+# ******** ★修正箇所★ 画像の追加とエラーハンドリング ********
+# 画像ファイルが見つからなかった場合でもアプリが停止しないようにします。
+IMAGE_PATH = "unnamed.jpg" # 画像ファイル名
 try:
-    st.image("unnamed.jpg", use_column_width=True)
-except FileNotFoundError:
-    st.warning("⚠️ 画像ファイルが見つかりません: unnamed.jpg。ファイル名とパスを確認してください。")
+    # ファイルの存在確認 (Streamlit Cloudの環境でエラーをキャッチするため)
+    if os.path.exists(IMAGE_PATH):
+        st.image(IMAGE_PATH, use_column_width=True)
+    else:
+        # ファイルが見つからない場合は警告を表示するのみで処理を継続
+        st.warning(f"⚠️ 警告: 画像ファイル '{IMAGE_PATH}' が見つかりませんでした。ファイル名と配置を確認してください。")
+
+except Exception as e:
+    # 予期せぬエラーが発生した場合
+    st.error(f"画像表示中にエラーが発生しました: {e}")
 # *****************************************
 
 st.title("💡 Reframe: ポジティブ変換日記")
