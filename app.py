@@ -4,45 +4,67 @@ from google import genai
 import os
 import datetime 
 import pytz 
+import base64 
 
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
 # ----------------------------------------------------
 if 'history' not in st.session_state:
     st.session_state['history'] = [] 
-# 一時的なレビュー用エントリをNoneで初期化
 if 'current_review_entry' not in st.session_state:
     st.session_state['current_review_entry'] = None 
+
+# ----------------------------------------------------
+# 背景画像（CSS）設定用の関数
+# ----------------------------------------------------
+def set_background_image(image_file):
+    try:
+        if not os.path.exists(image_file):
+             st.warning(f"⚠️ 背景画像ファイル '{image_file}' が見つかりませんでした。ファイル名と配置を確認してください。")
+             return
+             
+        with open(image_file, "rb") as f:
+            data = base64.b64encode(f.read()).decode("utf-8")
+        
+        css = f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpeg;base64,{data}");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-position: center;
+        }}
+        /* ★★★ 追加CSS: コンテンツエリアの背景に半透明の白を設定 ★★★ */
+        .main > div {{
+            background-color: rgba(255, 255, 255, 0.85); /* 白を85%の透明度で適用 */
+            padding: 20px;
+            border-radius: 10px;
+        }}
+        /* テキストエリアとコード表示の背景も透明度を下げて読みやすくする */
+        .stTextArea, .stCode, .stTextInput {{
+            background-color: rgba(255, 255, 255, 0.95) !important; 
+        }}
+        </style>
+        """
+        st.markdown(css, unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"背景画像設定中にエラーが発生しました: {e}")
 
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
 # ----------------------------------------------------
 st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 
-# ******** ★修正箇所★ 画像の追加とエラーハンドリング ********
-# 画像ファイルが見つからなかった場合でもアプリが停止しないようにします。
-IMAGE_PATH = "unnamed.jpg" # 画像ファイル名
-try:
-    # ファイルの存在確認 (Streamlit Cloudの環境でエラーをキャッチするため)
-    if os.path.exists(IMAGE_PATH):
-        st.image(IMAGE_PATH, use_column_width=True)
-    else:
-        # ファイルが見つからない場合は警告を表示するのみで処理を継続
-        st.warning(f"⚠️ 警告: 画像ファイル '{IMAGE_PATH}' が見つかりませんでした。ファイル名と配置を確認してください。")
+set_background_image("unnamed.jpg")
 
-except Exception as e:
-    # 予期せぬエラーが発生した場合
-    st.error(f"画像表示中にエラーが発生しました: {e}")
-# *****************************************
-
-st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
-st.markdown("---")
+# 以前削除したタイトル部分はそのまま削除された状態です
+st.markdown("---") 
 
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
 # ----------------------------------------------------
 try:
-    # 環境変数またはst.secretsからAPIキーを取得
     API_KEY = st.secrets["tool"]["GEMINI_API_KEY"] 
     client = genai.Client(api_key=API_KEY)
 except KeyError:
@@ -104,11 +126,9 @@ def reframe_negative_emotion(negative_text):
 # リセット処理用の関数を定義
 # ----------------------------------------------------
 def clear_input_only():
-    # 入力エリアのクリア
     st.session_state["negative_input_key"] = ""
 
 def reset_input():
-    # 入力とレビューエリアのクリア
     clear_input_only()
     st.session_state.current_review_entry = None
 
@@ -142,24 +162,20 @@ def on_convert_click(input_value):
         jst = pytz.timezone('Asia/Tokyo')
         now_jst = datetime.datetime.now(jst)
         
-        # 結果を一時変数に格納
         st.session_state.current_review_entry = {
             "timestamp": now_jst.strftime("%Y/%m/%d %H:%M"),
             "negative": input_value,
             "positive_reframe": converted_result
         }
         
-        # 変換完了後に入力エリアをクリア
         clear_input_only() 
 
 # ----------------------------------------------------
 # ユーザーインターフェース (UI)
 # ----------------------------------------------------
 
-# 日記入力エリアのタイトル 
 st.markdown("#### 📝 あなたのネガティブな気持ちを、安心してそのまま書き出してください。")
 
-# テキスト入力エリア 
 negative_input = st.text_area(
     "（ここは誰にも見られません。心に浮かんだことを自由に。）", 
     height=200,
@@ -167,24 +183,21 @@ negative_input = st.text_area(
     key="negative_input_key" 
 )
 
-# 変換ボタンとリセットボタンを横並びにする
 col1, col2 = st.columns([0.7, 0.3]) 
 
 with col1:
-    # 変換ボタン: コールバック関数を実行
     st.button(
         "✨ **ポジティブに変換する！**", 
         on_click=on_convert_click, 
-        args=[negative_input], # 入力値を引数として渡す
+        args=[negative_input],
         type="primary"
     )
 
 with col2:
-    # リセットボタン 
     st.button("↩️ もう一度書き直す", on_click=reset_input, key="reset_button") 
 
 # ----------------------------------------------------
-# 変換結果レビューエリア (UIの続き)
+# 変換結果レビューエリア
 # ----------------------------------------------------
 st.markdown("---")
 if st.session_state.current_review_entry:
@@ -198,7 +211,6 @@ if st.session_state.current_review_entry:
     
     st.markdown("#### **✅ 変換結果（あなたの学びと次の行動）:**")
     
-    # 3要素の構造化表示 
     st.markdown("##### 🧊 1. 事実の客観視（クールダウン）")
     st.info(review_entry['positive_reframe']['fact'])
     
@@ -208,7 +220,6 @@ if st.session_state.current_review_entry:
     st.markdown("##### 👣 3. 今後の具体的な行動案（Next Step）")
     st.warning(review_entry['positive_reframe']['action']) 
     
-    # --- 保存/破棄ボタンの設置 ---
     st.markdown("---")
     
     save_col, discard_col = st.columns([0.5, 0.5])
@@ -234,7 +245,7 @@ if st.session_state.current_review_entry:
 
 
 # ----------------------------------------------------
-# 履歴の表示エリア (UIの最後)
+# 履歴の表示エリア
 # ----------------------------------------------------
 st.subheader("📚 過去のポジティブ変換日記（保存済み）")
 
@@ -243,7 +254,6 @@ if st.session_state.history:
         
         st.caption(f"🗓️ 変換日時: {entry['timestamp']}")
         
-        # 履歴表示エリアは、構造化された辞書の内容を結合して表示
         history_value = (
             f"🧊 1. 事実の客観視: {entry['positive_reframe']['fact']}\n\n"
             f"🌱 2. ポジティブな側面抽出: {entry['positive_reframe']['positive']}\n\n"
