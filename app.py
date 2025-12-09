@@ -4,7 +4,7 @@ from google import genai
 import os
 import datetime 
 import pytz 
-import base64 # Base64エンコーディングのために追加
+import base64 
 
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
@@ -19,29 +19,25 @@ if 'current_review_entry' not in st.session_state:
 # ----------------------------------------------------
 def set_background_image(image_file):
     try:
-        # 画像ファイルが存在するか確認
         if not os.path.exists(image_file):
              st.warning(f"⚠️ 背景画像ファイル '{image_file}' が見つかりませんでした。ファイル名と配置を確認してください。")
              return
              
-        # 画像ファイルをBase64文字列に変換
         with open(image_file, "rb") as f:
             data = base64.b64encode(f.read()).decode("utf-8")
         
-        # CSSの定義と注入
         css = f"""
         <style>
         .stApp {{
             background-image: url("data:image/jpeg;base64,{data}");
-            background-size: cover; /* 画面全体を覆う */
-            background-repeat: no-repeat; /* 繰り返しなし */
-            background-attachment: fixed; /* スクロールしても固定 */
-            background-position: center; /* 中央に配置 */
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-position: center;
         }}
         </style>
         """
         st.markdown(css, unsafe_allow_html=True)
-        # 画像が適用されたことを確認するために、元のst.imageの警告は削除
     except Exception as e:
         st.error(f"背景画像設定中にエラーが発生しました: {e}")
 
@@ -50,13 +46,14 @@ def set_background_image(image_file):
 # ----------------------------------------------------
 st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 
-# ******** ★呼び出し箇所★ 背景画像の設定を最優先で実行 ********
 set_background_image("unnamed.jpg")
-# *****************************************
 
-st.title("💡 Reframe: ポジティブ変換日記")
-st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
-st.markdown("---")
+# ******** ★削除箇所★ タイトルとサブタイトルを削除 ********
+# st.title("💡 Reframe: ポジティブ変換日記")
+# st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
+# *********************************************************
+
+st.markdown("---") # セパレータは残します
 
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
