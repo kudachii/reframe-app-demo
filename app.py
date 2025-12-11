@@ -34,7 +34,7 @@ def set_custom_background():
     BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
     HEADER_IMG = "unnamed.jpg" 
     
-    HEADER_HEIGHT = "320px" 
+    HEADER_HEIGHT = "350px" 
     
     encoded_bg = get_base64_image(BG_IMAGE)
     encoded_header = get_base64_image(HEADER_IMG)
