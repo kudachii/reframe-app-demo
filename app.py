@@ -6,6 +6,16 @@ import datetime
 import pytz 
 import base64 
 
+# 画像ファイルをbase64エンコードするヘルパー関数
+def get_base64_image(image_path):
+    try:
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as f:
+                return base64.b64encode(f.read()).decode()
+    except Exception:
+        return ""
+    return ""
+    
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
 # ----------------------------------------------------
@@ -19,28 +29,50 @@ if 'current_review_entry' not in st.session_state:
 # ----------------------------------------------------
 st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 
-
 # ★★★ カスタム背景設定用の関数を定義 ★★★
 def set_custom_background():
-    BACKGROUND_IMAGE = "kabegami_107dotpattern_pi.jpg"
+    BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
+    # ★★★ ヘッダー画像ファイルをunnamed.jpgに修正 ★★★
+    HEADER_IMG = "unnamed.jpg" 
     
+    # ヘッダー画像の高さに合わせて調整 (固定エリアのサイズ)
+    HEADER_HEIGHT = "180px" 
+    
+    encoded_bg = get_base64_image(BG_IMAGE)
+    encoded_header = get_base64_image(HEADER_IMG)
+
     st.markdown(
         f"""
         <style>
         /* 1. アプリ全体の背景：ドット柄を適用 */
         .stApp {{
-            background-image: none; /* 全体背景を無効化 */
-        }}
-
-        /* メインコンテンツエリアの親要素にドット柄を適用 */
-        .main {{
-            background-image: url("data:image/jpeg;base64,{get_base64_image(BACKGROUND_IMAGE)}");
+            background-image: url("data:image/jpeg;base64,{encoded_bg}");
             background-size: repeat; 
             background-attachment: fixed; 
             background-position: center; 
         }}
-
-        /* 2. メインコンテンツエリアの背景を白くし、読みやすくする */
+        
+        /* 2. カスタム固定ヘッダーのCSS */
+        #custom-fixed-header {{
+            position: fixed;
+            top: 0;
+            left: 50%; 
+            transform: translateX(-50%); 
+            width: 100%;
+            max-width: 700px; /* メインコンテンツの幅に合わせる */
+            height: {HEADER_HEIGHT}; /* 高さ設定 */
+            z-index: 9999; 
+            background-color: white; 
+            
+            /* 画像を背景として適用し、中央に固定 */
+            background-image: url("data:image/jpeg;base64,{encoded_header}");
+            background-size: contain; 
+            background-repeat: no-repeat;
+            background-position: center; 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); 
+        }}
+        
+        /* 3. コンテンツエリアの背景を白くする（透け防止） */
         .main > div {{
             background-color: white; 
             padding: 20px; 
@@ -48,69 +80,38 @@ def set_custom_background():
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
         }}
         
-        /* テキストエリア自体の背景を白くする */
-        .stTextArea textarea {{
-            background-color: white;
+        /* 4. サイドバーの領域を完全に非表示にする（以前の試行の残骸を消す） */
+        section[data-testid="stSidebar"] {{
+            display: none !important;
         }}
         
-        /* ★★★ 3. サイドバー固定のデザインを調整するCSS ★★★ */
-        section[data-testid="stSidebar"] {{
-            /* サイドバーの幅を非常に狭くし、左側の固定領域を最小限にする */
-            width: 10px !important; 
-            padding: 0;
-            overflow: visible; /* 画像がサイドバーの外に出るのを許可 */
-        }}
-
-        /* st.sidebar内の画像コンポーネントの親要素に対してネガティブマージンを適用 */
-        /* これにより、画像がメインコンテンツ側に押し出され、中央寄りに固定されます */
-        section[data-testid="stSidebar"] div[data-testid="stImage"] {{
-            /* 画像を左端から外側（メインコンテンツ側）へ押し出す */
-            margin-left: -280px !important; /* ★★★ この値で調整します ★★★ */
-            margin-top: 10px !important;
-            width: 700px; /* 画像の元の幅または最大幅を設定 */
-            position: relative; 
-            z-index: 10000;
+        /* 5. テキストエリア自体の背景を白くする */
+        .stTextArea textarea {{
+            background-color: white;
         }}
         </style>
         """,
         unsafe_allow_html=True
     )
 
-# 画像ファイルをbase64エンコードするヘルパー関数
-def get_base64_image(image_path):
-    try:
-        if os.path.exists(image_path):
-            with open(image_path, "rb") as f:
-                return base64.b64encode(f.read()).decode()
-    except Exception:
-        return ""
-    return ""
-
 set_custom_background() 
 # ----------------------------------------------------
 
-# ******** ★★★ 修正箇所：ヘッダー画像をサイドバーに移動（固定） ★★★ ********
-IMAGE_PATH = "2025-12-09 9.44の画像.jpg" # 正しいファイル名に修正
+# ★★★ 固定ヘッダー用のカスタムDIVを挿入 (画像はCSSの背景として適用済み) ★★★
+st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
 
-try:
-    if os.path.exists(IMAGE_PATH):
-        # st.sidebar を使用し、画像を固定された領域に配置
-        with st.sidebar:
-            # st.sidebar の中は自動的に固定されます
-            st.image(IMAGE_PATH, use_column_width=False) # width指定はCSSで行うためFalseに
-            
-    else:
-        st.sidebar.warning(f"⚠️ 警告: ヘッダー画像ファイル '{IMAGE_PATH}' が見つかりませんでした。")
-
-except Exception as e:
-    st.sidebar.error(f"画像表示中にエラーが発生しました: {e}")
-# ***************************************************************
-
-# ★★★ 修正点：固定ヘッダーで隠れるコンテンツを下にずらすためのスペーサーは削除 ★★★
-# サイドバー固定はコンテンツを隠さないため、スペーサーは不要。
+# ★★★ 固定ヘッダーで隠れるコンテンツを下にずらすためのスペーサー（CSSと高さ一致） ★★★
+st.markdown("<div style='height: 180px;'></div>", unsafe_allow_html=True) 
 
 st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
 st.markdown("---")
+# ----------------------------------------------------
+# 履歴機能のためのセッションステートの初期化 
+# ----------------------------------------------------
+if 'history' not in st.session_state:
+    st.session_state['history'] = [] 
+if 'current_review_entry' not in st.session_state:
+    st.session_state['current_review_entry'] = None 
 
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
