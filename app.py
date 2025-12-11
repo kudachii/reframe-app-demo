@@ -6,6 +6,89 @@ import datetime
 import pytz 
 import base64 
 
+# 画像ファイルをbase64エンコードするヘルパー関数
+def get_base64_image(image_path):
+    try:
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as f:
+                return base64.b64encode(f.read()).decode()
+    except Exception as e:
+        st.error(f"画像エンコードエラー: {e}")
+        return ""
+    return ""
+
+# ----------------------------------------------------
+# 画面デザインとタイトル設定
+# ----------------------------------------------------
+st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
+
+# ★★★ カスタム背景設定用の関数を定義 ★★★
+def set_custom_background():
+    BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
+    HEADER_IMG = "unnamed.jpg"
+    
+    # ヘッダー画像の高さに合わせて調整 (固定エリアのサイズ)
+    HEADER_HEIGHT = "180px" 
+    
+    encoded_bg = get_base64_image(BG_IMAGE)
+    encoded_header = get_base64_image(HEADER_IMG)
+
+    st.markdown(
+        f"""
+        <style>
+        /* 1. アプリ全体の背景：ドット柄を適用 */
+        .stApp {{
+            background-image: url("data:image/jpeg;base64,{encoded_bg}");
+            background-size: repeat; 
+            background-attachment: fixed; 
+            background-position: center; 
+        }}
+        
+        /* 2. カスタム固定ヘッダーのCSS */
+        #custom-fixed-header {{
+            position: fixed;
+            top: 0;
+            left: 50%; 
+            transform: translateX(-50%); 
+            width: 100%;
+            max-width: 700px; /* メインコンテンツの幅に合わせる */
+            height: {HEADER_HEIGHT}; /* 高さ設定 */
+            z-index: 9999; 
+            background-color: white; 
+            background-image: url("data:image/jpeg;base64,{encoded_header}");
+            background-size: contain; /* 画像をブロックサイズに合わせる */
+            background-repeat: no-repeat;
+            background-position: center; /* 画像を中央に配置 */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); 
+        }}
+        
+        /* 3. コンテンツエリアの背景を白くする（透け防止） */
+        .main > div {{
+            background-color: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+        }}
+        
+        /* 4. サイドバーは元の位置に戻すため、CSSを削除 (サイドバーが有効になっている場合) */
+        section[data-testid="stSidebar"] {{
+            width: 210px !important; /* デフォルト幅に近い値に戻す */
+            padding-top: 50px;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+set_custom_background() 
+# ----------------------------------------------------
+
+# ★★★ 修正箇所：固定ヘッダー用のカスタムDIVを挿入 (画像はCSSの背景として適用済み) ★★★
+st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
+
+# ★★★ 修正箇所：固定ヘッダーで隠れるコンテンツを下にずらすためのスペーサー（高さはCSSと一致させる） ★★★
+st.markdown("<div style='height: 180px;'></div>", unsafe_allow_html=True) 
+
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
 # ----------------------------------------------------
@@ -13,92 +96,6 @@ if 'history' not in st.session_state:
     st.session_state['history'] = [] 
 if 'current_review_entry' not in st.session_state:
     st.session_state['current_review_entry'] = None 
-
-# ----------------------------------------------------
-# 画面デザインとタイトル設定
-# ----------------------------------------------------
-st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
-
-
-# ★★★ カスタム背景設定用の関数を定義 ★★★
-def set_custom_background():
-    BACKGROUND_IMAGE = "kabegami_107dotpattern_pi.jpg"
-    
-    try:
-        if os.path.exists(BACKGROUND_IMAGE):
-            with open(BACKGROUND_IMAGE, "rb") as f:
-                img_data = f.read()
-            encoded = base64.b64encode(img_data).decode()
-            
-            st.markdown(
-                f"""
-                <style>
-                /* アプリ全体の背景：ドット柄を適用 */
-                /* メインコンテンツエリアの背景にのみドット柄を適用するように変更 */
-                .stApp {{
-                    background-image: none; /* 全体背景を無効化 */
-                }}
-
-                /* メインコンテンツエリアの親要素にドット柄を適用 */
-                .main {{
-                    background-image: url("data:image/jpeg;base64,{encoded}");
-                    background-size: repeat; 
-                    background-attachment: fixed; 
-                    background-position: center; 
-                }}
-
-                /* ★★★ サイドバーにヘッダー画像を固定するため、メインコンテンツの背景を白くするCSSは維持 ★★★ */
-                .main > div {{
-                    background-color: white; 
-                    padding: 20px; 
-                    border-radius: 10px; 
-                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
-                }}
-                
-                /* テキストエリア自体の背景を白くする */
-                .stTextArea textarea {{
-                    background-color: white;
-                }}
-                
-                /* ★★★ サイドバーの幅を調整し、画像を大きく見せる (オプション) ★★★ */
-                section[data-testid="stSidebar"] {{
-                    width: 300px !important; 
-                }}
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-        else:
-            st.warning(f"⚠️ 警告: 背景画像ファイル '{BACKGROUND_IMAGE}' が見つかりませんでした。ファイル名と配置を確認してください。")
-
-    except Exception as e:
-        st.error(f"背景設定中にエラーが発生しました: {e}")
-
-# set_page_configの直後でカスタム背景を設定
-set_custom_background() 
-# ----------------------------------------------------
-
-# ******** ★★★ 修正箇所：ヘッダー画像をサイドバーに移動 ★★★ ********
-IMAGE_PATH = "unnamed.jpg" # アプリのヘッダー画像ファイル名
-try:
-    if os.path.exists(IMAGE_PATH):
-        # st.sidebar を使用し、画像を固定された領域に配置
-        with st.sidebar:
-            # st.sidebar の中は自動的に固定されます
-            st.image(IMAGE_PATH, use_column_width=True)
-            # st.sidebar の下部にタイトルと説明を追加しても良い
-            st.markdown("---")
-            st.caption("Reframe: ポジティブ日記")
-            
-    else:
-        st.sidebar.warning(f"⚠️ 警告: ヘッダー画像ファイル '{IMAGE_PATH}' が見つかりませんでした。")
-
-except Exception as e:
-    st.sidebar.error(f"画像表示中にエラーが発生しました: {e}")
-# ***************************************************************
-
-st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
-st.markdown("---")
 
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
@@ -140,11 +137,8 @@ def reframe_negative_emotion(negative_text):
         
         # --- AIの出力文字列を3つの要素に分割し、辞書で返す ---
         try:
-            # 1. '2.' で分割
             fact_and_rest = raw_text.split("2. ", 1)
             fact = fact_and_rest[0].strip().replace("1. ", "").replace("**", "")
-            
-            # 2. '3.' で分割
             positive_and_action = fact_and_rest[1].split("3. ", 1)
             positive = positive_and_action[0].strip().replace("**", "")
             action = positive_and_action[1].strip().replace("**", "")
@@ -213,6 +207,8 @@ def on_convert_click(input_value):
 # ユーザーインターフェース (UI)
 # ----------------------------------------------------
 
+st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
+st.markdown("---")
 st.markdown("#### 📝 あなたのネガティブな気持ちを、安心してそのまま書き出してください。")
 
 negative_input = st.text_area(
