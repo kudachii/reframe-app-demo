@@ -32,10 +32,9 @@ st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 # ★★★ カスタム背景設定用の関数を定義 ★★★
 def set_custom_background():
     BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
-    # ★★★ ヘッダー画像ファイルをunnamed.jpgに修正 ★★★
     HEADER_IMG = "unnamed.jpg" 
     
-    # ヘッダー画像の高さに合わせて調整 (固定エリアのサイズ)
+    # ★★★ 固定ヘッダーの初期高さ設定（必要に応じて調整してください） ★★★
     HEADER_HEIGHT = "180px" 
     
     encoded_bg = get_base64_image(BG_IMAGE)
@@ -66,7 +65,10 @@ def set_custom_background():
             
             /* 画像を背景として適用し、中央に固定 */
             background-image: url("data:image/jpeg;base64,{encoded_header}");
-            background-size: contain; 
+            
+            /* ★★★ 修正ポイント：contain から cover に変更し、余白をなくす ★★★ */
+            background-size: cover; 
+            
             background-repeat: no-repeat;
             background-position: center; 
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); 
@@ -80,7 +82,7 @@ def set_custom_background():
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
         }}
         
-        /* 4. サイドバーの領域を完全に非表示にする（以前の試行の残骸を消す） */
+        /* 4. サイドバーの領域を完全に非表示にする */
         section[data-testid="stSidebar"] {{
             display: none !important;
         }}
@@ -105,14 +107,6 @@ st.markdown("<div style='height: 180px;'></div>", unsafe_allow_html=True)
 
 st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
 st.markdown("---")
-# ----------------------------------------------------
-# 履歴機能のためのセッションステートの初期化 
-# ----------------------------------------------------
-if 'history' not in st.session_state:
-    st.session_state['history'] = [] 
-if 'current_review_entry' not in st.session_state:
-    st.session_state['current_review_entry'] = None 
-
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
 # ----------------------------------------------------
