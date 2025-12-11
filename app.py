@@ -35,7 +35,7 @@ def set_custom_background():
     HEADER_IMG = "unnamed.jpg" 
     
     # ★★★ 固定ヘッダーの初期高さ設定（画像全体が表示されるよう、必要に応じて値を大きくしてください） ★★★
-    HEADER_HEIGHT = "220px" 
+    HEADER_HEIGHT = "300px" 
     
     encoded_bg = get_base64_image(BG_IMAGE)
     encoded_header = get_base64_image(HEADER_IMG)
