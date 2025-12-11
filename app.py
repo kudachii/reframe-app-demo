@@ -4,6 +4,7 @@ from google import genai
 import os
 import datetime 
 import pytz 
+import base64  # ★★★ 1. base64モジュールをインポートに追加 ★★★
 
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
@@ -19,19 +20,53 @@ if 'current_review_entry' not in st.session_state:
 # ----------------------------------------------------
 st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 
+
+# ★★★ 2. カスタム背景設定用の関数を定義 ★★★
+def set_custom_background():
+    # 使用する背景画像ファイル名を指定
+    BACKGROUND_IMAGE = "kabegami_107dotpattern_pi.jpg"
+
+    # ファイルをbase64でエンコードしてCSSに埋め込む
+    try:
+        if os.path.exists(BACKGROUND_IMAGE):
+            with open(BACKGROUND_IMAGE, "rb") as f:
+                img_data = f.read()
+            encoded = base64.b64encode(img_data).decode()
+            
+            st.markdown(
+                f"""
+                <style>
+                .stApp {{
+                    /* base64エンコードされた画像を背景に設定 */
+                    background-image: url("data:image/jpeg;base64,{encoded}");
+                    background-size: repeat; /* 画像を繰り返して背景を敷き詰める */
+                    background-attachment: fixed; /* スクロールしても背景を固定する */
+                    background-position: center; /* 背景画像を中央に配置 */
+                }}
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            st.warning(f"⚠️ 警告: 背景画像ファイル '{BACKGROUND_IMAGE}' が見つかりませんでした。ファイル名と配置を確認してください。")
+
+    except Exception as e:
+        st.error(f"背景設定中にエラーが発生しました: {e}")
+
+# set_page_configの直後でカスタム背景を設定
+set_custom_background() # ★★★ 3. 関数呼び出しを追加 ★★★
+
+
 # ******** ★修正箇所★ 画像の追加とエラーハンドリング ********
-# 画像ファイルが見つからなかった場合でもアプリが停止しないようにします。
-IMAGE_PATH = "unnamed.jpg" # 画像ファイル名
+# 元の画像の表示は、st.imageを使います
+IMAGE_PATH = "unnamed.jpg" # アプリのヘッダー画像ファイル名
 try:
-    # ファイルの存在確認 (Streamlit Cloudの環境でエラーをキャッチするため)
     if os.path.exists(IMAGE_PATH):
         st.image(IMAGE_PATH, use_column_width=True)
     else:
-        # ファイルが見つからない場合は警告を表示するのみで処理を継続
-        st.warning(f"⚠️ 警告: 画像ファイル '{IMAGE_PATH}' が見つかりませんでした。ファイル名と配置を確認してください。")
+        st.warning(f"⚠️ 警告: ヘッダー画像ファイル '{IMAGE_PATH}' が見つかりませんでした。ファイル名と配置を確認してください。")
 
 except Exception as e:
-    # 予期せぬエラーが発生した場合
     st.error(f"画像表示中にエラーが発生しました: {e}")
 # *****************************************
 
