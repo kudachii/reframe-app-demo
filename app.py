@@ -113,7 +113,7 @@ except Exception as e:
 
 # ★★★ 修正点：固定ヘッダーで隠れるコンテンツを下にずらすためのスペーサー ★★★
 # set_custom_background関数内の HEADER_HEIGHT と同じ値 (180px) を指定
-st.markdown("<div style='height: 180px;'></div>", unsafe_allow_html=True) 
+st.markdown("<div style='height: 220px;'></div>", unsafe_allow_html=True) 
 
 st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
 st.markdown("---")
