@@ -54,7 +54,7 @@ def set_custom_background():
         /* 2. カスタム固定ヘッダーのCSS */
         #custom-fixed-header {{
             position: fixed;
-            top: 0;
+            top: 20px;
             left: 50%; 
             transform: translateX(-50%); 
             width: 100%;
