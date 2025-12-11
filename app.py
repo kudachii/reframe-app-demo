@@ -22,14 +22,11 @@ st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 
 # ★★★ カスタム背景設定用の関数を定義 ★★★
 def set_custom_background():
-    # 使用する背景画像ファイル名を指定
     BACKGROUND_IMAGE = "kabegami_107dotpattern_pi.jpg"
     
-    # ヘッダー画像の高さを推定し、コンテンツを下げるための値 (px単位)
-    # ※unnamed.jpg の高さに合わせて、この数値を調整してください。
+    # ヘッダー画像の高さに合わせて調整 (固定エリアのサイズ)
     HEADER_HEIGHT = "180px" 
 
-    # ファイルをbase64でエンコードしてCSSに埋め込む
     try:
         if os.path.exists(BACKGROUND_IMAGE):
             with open(BACKGROUND_IMAGE, "rb") as f:
@@ -47,21 +44,25 @@ def set_custom_background():
                     background-position: center; 
                 }}
                 
-                /* ★★★ ヘッダー画像を固定するためのCSS ★★★ */
-                /* Streamlitの最初の画像ブロックを特定し、固定 */
-                section.main div[data-testid="stImage"]:first-child {{
+                /* ★★★ 修正点：固定ヘッダーのCSS（IDで指定） ★★★ */
+                #fixed-header-image {{
                     position: fixed;
                     top: 0;
                     left: 50%; 
                     transform: translateX(-50%); 
                     width: 100%;
                     max-width: 700px; /* メインコンテンツの幅に合わせる */
-                    z-index: 999; 
-                    background-color: white; /* 固定時に後ろのドット柄が透けるのを防ぐ */
-                    padding: 10px 0; /* 上下の余白 */
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 固定感のための影 */
+                    z-index: 9999; /* 最前面 */
+                    background-color: white; 
+                    padding: 10px 0;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); 
+                    /* st.imageの内部要素の調整 */
+                    line-height: 0; 
                 }}
-
+                #fixed-header-image img {{
+                    margin-bottom: 0px !important;
+                }}
+                
                 /* ★★★ コンテンツエリアの背景を白くする（透け防止） ★★★ */
                 /* メインコンテンツエリアの背景を白くする */
                 .main > div {{
@@ -99,7 +100,10 @@ set_custom_background()
 IMAGE_PATH = "unnamed.jpg" # アプリのヘッダー画像ファイル名
 try:
     if os.path.exists(IMAGE_PATH):
+        # ★★★ 修正点：IDを付与したdivでst.imageを囲む ★★★
+        st.markdown('<div id="fixed-header-image">', unsafe_allow_html=True)
         st.image(IMAGE_PATH, use_column_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.warning(f"⚠️ 警告: ヘッダー画像ファイル '{IMAGE_PATH}' が見つかりませんでした。ファイル名と配置を確認してください。")
 
@@ -107,8 +111,8 @@ except Exception as e:
     st.error(f"画像表示中にエラーが発生しました: {e}")
 # *****************************************
 
-# ★★★ 修正ポイント：固定ヘッダーで隠れるコンテンツを下にずらすためのスペーサー ★★★
-# set_custom_background関数内の HEADER_HEIGHT と同じ値を入れて、コンテンツ全体を下にずらします。
+# ★★★ 修正点：固定ヘッダーで隠れるコンテンツを下にずらすためのスペーサー ★★★
+# set_custom_background関数内の HEADER_HEIGHT と同じ値 (180px) を指定
 st.markdown("<div style='height: 180px;'></div>", unsafe_allow_html=True) 
 
 st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
