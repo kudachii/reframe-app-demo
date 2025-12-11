@@ -34,7 +34,16 @@ def set_custom_background():
     BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
     HEADER_IMG = "unnamed.jpg" 
     
-    HEADER_HEIGHT = "330px" 
+    # ★★★ 現在のコードから取得した設定値 ★★★
+    HEADER_HEIGHT = "330px"  # 画像の高さ
+    HEADER_TOP_OFFSET = "40px" # 上から下げた距離
+    
+    # コンテンツが画像に隠れないようにするためのスペーサーの正確な高さ
+    # 計算: HEADER_HEIGHT (330px) + HEADER_TOP_OFFSET (40px) = 370px
+    SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', ''))) + "px"
+
+    # st.markdownのスペーサーにもこの変数を使います。
+    st.session_state['spacer_height'] = SPACER_HEIGHT 
     
     encoded_bg = get_base64_image(BG_IMAGE)
     encoded_header = get_base64_image(HEADER_IMG)
@@ -53,8 +62,7 @@ def set_custom_background():
         /* 2. カスタム固定ヘッダーのCSS */
         #custom-fixed-header {{
             position: fixed;
-            /* 例としてトップを20pxに設定（ご自身で調整した数値に置き換えてください） */
-            top: 40px; 
+            top: {HEADER_TOP_OFFSET}; 
             left: 50%; 
             transform: translateX(-50%); 
             width: 100%;
@@ -70,22 +78,34 @@ def set_custom_background():
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); 
         }}
         
-        /* 3. コンテンツエリアの背景を白くする（透け防止） */
+        /* ★★★ 3. コンテンツエリアの背景を白くする（可読性向上） ★★★ */
+        /* メインエリアの親要素を完全に白くする */
         .main > div {{
-            background-color: white; 
+            background-color: white !important; /* 優先度を上げる */
             padding: 20px; 
             border-radius: 10px; 
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
         }}
         
+        /* Streamlitのブロック要素も白くして透けを防ぐ */
+        [data-testid="stVerticalBlock"], [data-testid="stHorizontalBlock"] {{
+            background-color: white; 
+        }}
+        
+        /* フォームの親要素も白くする */
+        [data-testid="stForm"] {{
+            background-color: white;
+            padding: 0;
+        }}
+        
+        /* テキストエリア自体の背景を白くする */
+        .stTextArea textarea {{
+            background-color: white;
+        }}
+        
         /* 4. サイドバーの領域を完全に非表示にする */
         section[data-testid="stSidebar"] {{
             display: none !important;
-        }}
-        
-        /* 5. テキストエリア自体の背景を白くする */
-        .stTextArea textarea {{
-            background-color: white;
         }}
         </style>
         """,
@@ -98,11 +118,11 @@ set_custom_background()
 # ★★★ 固定ヘッダー用のカスタムDIVを挿入 ★★★
 st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
 
-# ★★★ 修正箇所：スペーサーの背景を白くするCSSを追加 ★★★
-# height: 200px は、 (画像の高さ 180px) + (topで下げた距離 20px) の合計です。
-# ご自身の環境で調整した高さに合わせてください。
-st.markdown("<div style='height: 160px; background-color: white;'></div>", unsafe_allow_html=True) 
+# ★★★ 修正箇所：スペーサーの高さを正確に修正し、背景を白にする ★★★
+# 計算された正確な高さ (例: 370px) を使用します。
+st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '370px')}; background-color: white;'></div>", unsafe_allow_html=True) 
 
+st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
 st.markdown("---")
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
@@ -213,6 +233,8 @@ def on_convert_click(input_value):
 # ----------------------------------------------------
 # ユーザーインターフェース (UI)
 # ----------------------------------------------------
+st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
+st.markdown("---")
 
 st.markdown("#### 📝 あなたのネガティブな気持ちを、安心してそのまま書き出してください。")
 
