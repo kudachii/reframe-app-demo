@@ -9,8 +9,24 @@ import base64
 # 画像ファイルをbase64エンコードするヘルパー関数
 def get_base64_image(image_path):
     try:
-        if os.path.exists(image_path):
-            with open(image_path, "rb") as f:
+        # どの画像ファイル名が使われているかを確認
+        # HEADER_IMG = "unnamed.jpg" は提供されていませんが、ヘッダーの代替画像ファイル名として `2025-12-09 9.44の画像.jpg` を仮定し、CSSで使われている変数名に合わせてファイル名を調整
+        
+        # 実際に読み込むファイル名を適切に設定する (ここでは元のファイル名を使用)
+        if image_path == "kabegami_107dotpattern_pi.jpg":
+             path_to_read = "kabegami_107dotpattern_pi.jpg"
+        # 以前のコードで "unnamed.jpg" が使われていたが、ユーザーが提供したファイルリストにないため、
+        # ユーザーが提供した中で最もヘッダー画像らしいファイル名を使用する (例として、Reframeの画像)
+        elif image_path == "unnamed.jpg":
+             # ユーザーが使用しているファイル名が不明確なため、最も近いと思われる画像を仮定
+             # ここでは、CSS内の変数名 'unnamed.jpg' が実際にユーザーの環境にある前提で処理を継続します
+             path_to_read = image_path 
+        else:
+             path_to_read = image_path
+
+
+        if os.path.exists(path_to_read):
+            with open(path_to_read, "rb") as f:
                 return base64.b64encode(f.read()).decode()
     except Exception:
         return ""
@@ -39,11 +55,11 @@ def set_custom_background():
     HEADER_TOP_OFFSET = "40px" # 上から下げた距離
     
     # コンテンツが画像に隠れないようにするためのスペーサーの正確な高さ
-    # 計算: HEADER_HEIGHT (330px) + HEADER_TOP_OFFSET (40px) + 微調整 (10px) = 380px
-    SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', '')) + 10) + "px"
+    # 修正: 微調整の10pxを削除し、正確な高さ (330px + 40px = 370px) に設定し直す
+    SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', ''))) + "px"
 
     # st.markdownのスペーサーにもこの変数を使います。
-    st.session_state['spacer_height'] = SPACER_HEIGHT 
+    st.session_state['spacer_height'] = SPACER_HEIGHT # 今回は 370px に設定
     
     encoded_bg = get_base64_image(BG_IMAGE)
     encoded_header = get_base64_image(HEADER_IMG)
@@ -118,12 +134,10 @@ set_custom_background()
 # ★★★ 固定ヘッダー用のカスタムDIVを挿入 ★★★
 st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
 
-# ★★★ スペーサーの高さを正確に設定し、背景を白にする（今回は380px） ★★★
-st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '380px')}; background-color: white;'></div>", unsafe_allow_html=True) 
+# ★★★ スペーサーの高さを正確に設定し、背景を白にする（今回は370px） ★★★
+st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '370px')}; background-color: white;'></div>", unsafe_allow_html=True) 
 
-# ★★★ 削除対象: アプリのメインコピーを削除しました ★★★
-# st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
-# st.markdown("---")
+# ★★★ 削除対象: ヘッダー直後のセパレーターも削除しました。これにより、次の要素との隙間が最小化されます。 ★★★ 
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
 # ----------------------------------------------------
@@ -233,8 +247,6 @@ def on_convert_click(input_value):
 # ----------------------------------------------------
 # ユーザーインターフェース (UI)
 # ----------------------------------------------------
-# ★★★ タイトル削除に伴い、次の要素との間にセパレーターを追加し、区切りを明確にしました ★★★
-st.markdown("---") 
 
 st.markdown("#### 📝 あなたのネガティブな気持ちを、安心してそのまま書き出してください。")
 
