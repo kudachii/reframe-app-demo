@@ -38,10 +38,11 @@ def set_custom_background():
     HEADER_HEIGHT = "330px"  # 画像の高さ
     HEADER_TOP_OFFSET = "40px" # 上から下げた距離
     
-    # コンテンツが画像に隠れないようにするためのスペーサーの正確な高さ (370px)
-    SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', ''))) + "px"
+    # コンテンツが画像に隠れないようにするためのスペーサーの正確な高さ 
+    # 修正: 370px (330+40) から 10px 減らして 360px に調整し、次のコンテンツを上に引き込む
+    SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', '')) - 10) + "px"
 
-    st.session_state['spacer_height'] = SPACER_HEIGHT # 370px に設定
+    st.session_state['spacer_height'] = SPACER_HEIGHT # 360px に設定
     
     encoded_bg = get_base64_image(BG_IMAGE)
     encoded_header = get_base64_image(HEADER_IMG)
@@ -81,14 +82,14 @@ def set_custom_background():
             padding: 20px; 
             padding-top: 0px !important; 
             margin-top: 0px !important; 
-            padding-bottom: 20px; /* 下はそのまま */
+            padding-bottom: 20px; 
             border-radius: 10px; 
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
         }}
         
         /* Streamlitのブロック要素も白くして透けを防ぐ */
         [data-testid="stVerticalBlock"], 
-        [data-testid="stVerticalBlock"] > div:first-child {{ /* ★★★ 修正箇所: 親divもターゲットにする ★★★ */
+        [data-testid="stVerticalBlock"] > div:first-child {{ 
             background-color: white; 
             padding-top: 0px !important; 
             margin-top: 0px !important; 
@@ -134,8 +135,8 @@ set_custom_background()
 # ★★★ 固定ヘッダー用のカスタムDIVを挿入 ★★★
 st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
 
-# ★★★ スペーサーの高さ (370px) ★★★
-st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '370px')}; background-color: white;'></div>", unsafe_allow_html=True) 
+# ★★★ スペーサーの高さ (360px) ★★★
+st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '360px')}; background-color: white;'></div>", unsafe_allow_html=True) 
 
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
