@@ -79,8 +79,9 @@ def set_custom_background():
         
         /* 3. コンテンツエリアの背景を白くする（可読性向上） */
         .main > div {{
-            background-color: white !important; /* 優先度を上げる */
+            background-color: white !important; 
             padding: 20px; 
+            padding-top: 0px !important; /* ★★★ 修正: メインエリアの上部パディングを削除 ★★★ */
             border-radius: 10px; 
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
         }}
@@ -88,6 +89,7 @@ def set_custom_background():
         /* Streamlitのブロック要素も白くして透けを防ぐ */
         [data-testid="stVerticalBlock"], [data-testid="stHorizontalBlock"] {{
             background-color: white; 
+            padding-top: 0px !important; /* ★★★ 追加: ブロックの上部パディングも削除 ★★★ */
         }}
         
         /* フォームの親要素も白くする */
@@ -106,8 +108,7 @@ def set_custom_background():
             display: none !important;
         }}
 
-        /* ★★★ 追加：ヘッダー直後のコンテンツブロックの上マージンを削除して隙間を最小化 ★★★ */
-        /* st.markdown("####...") が持つデフォルトの上部マージンを打ち消す */
+        /* ヘッダー直後のコンテンツブロックの上マージンを削除 */
         [data-testid="stVerticalBlock"] > div > [data-testid="stMarkdownContainer"]:first-child {{
              margin-top: 0px !important; 
              padding-top: 0px !important;
@@ -236,7 +237,7 @@ def on_convert_click(input_value):
 # ユーザーインターフェース (UI)
 # ----------------------------------------------------
 
-# CSSで上マージンをゼロにしているので、ヘッダー直後にこれが続いても隙間は最小限になります。
+# CSSの調整により、ヘッダー直後にこの要素が隙間なく続きます。
 st.markdown("#### 📝 あなたのネガティブな気持ちを、安心してそのまま書き出してください。")
 
 negative_input = st.text_area(
