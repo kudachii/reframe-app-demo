@@ -35,15 +35,14 @@ def set_custom_background():
     BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
     HEADER_IMG = "unnamed.jpg" 
     
-    # ★★★ 現在のコードから取得した設定値 ★★★
-    HEADER_HEIGHT = "320px"  # 画像の高さ
-    HEADER_TOP_OFFSET = "0px" # 上から下げた距離
+    # ★★★ 修正箇所 1: オフセットを 20px に変更 (画像を下にずらす) ★★★
+    HEADER_HEIGHT = "330px"  # 画像の高さ
+    HEADER_TOP_OFFSET = "20px" # 上から下げた距離を 20px に変更
     
-    # コンテンツが画像に隠れないようにするためのスペーサーの正確な高さ 
-    # 正しい高さ (330+40) = 370px
+    # ★★★ 修正箇所 2: スペーサーの高さを再計算 (20px + 330px = 350px) ★★★
     SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', ''))) + "px"
 
-    st.session_state['spacer_height'] = SPACER_HEIGHT # 370px に設定
+    st.session_state['spacer_height'] = SPACER_HEIGHT # 350px に設定
     
     encoded_bg = get_base64_image(BG_IMAGE)
     encoded_header = get_base64_image(HEADER_IMG)
@@ -62,7 +61,7 @@ def set_custom_background():
         /* 2. カスタム固定ヘッダーのCSS */
         #custom-fixed-header {{
             position: fixed;
-            top: {HEADER_TOP_OFFSET}; 
+            top: {HEADER_TOP_OFFSET}; /* 20pxが適用される */
             left: 50%; 
             transform: translateX(-50%); 
             width: 100%;
@@ -122,7 +121,7 @@ def set_custom_background():
         
         /* H4要素（最初のタイトル）自体のマージンをさらに削る */
         h4:first-of-type {{
-             margin-top: -25px !important; /* ★★★ 修正：ネガティブマージンを大幅に強化し、隙間を吸収 ★★★ */
+             margin-top: -25px !important; /* テキストの密着度を維持 */
              padding-top: 0rem !important;
         }}
         </style>
@@ -136,8 +135,8 @@ set_custom_background()
 # ★★★ 固定ヘッダー用のカスタムDIVを挿入 ★★★
 st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
 
-# ★★★ スペーサーの高さ (370px) ★★★
-st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '370px')}; background-color: white;'></div>", unsafe_allow_html=True) 
+# ★★★ スペーサーの高さ (350px) ★★★
+st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '350px')}; background-color: white;'></div>", unsafe_allow_html=True) 
 
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
