@@ -105,7 +105,7 @@ set_custom_background()
 st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
 
 # ★★★ 固定ヘッダーで隠れるコンテンツを下にずらすためのスペーサー（CSSと高さ一致） ★★★
-st.markdown("<div style='height: 180px;'></div>", unsafe_allow_html=True) 
+st.markdown("<div style='height: 200px;'></div>", unsafe_allow_html=True) 
 
 st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
 st.markdown("---")
