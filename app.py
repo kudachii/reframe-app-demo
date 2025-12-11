@@ -34,7 +34,7 @@ def set_custom_background():
     BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
     HEADER_IMG = "unnamed.jpg" 
     
-    HEADER_HEIGHT = "180px" 
+    HEADER_HEIGHT = "320px" 
     
     encoded_bg = get_base64_image(BG_IMAGE)
     encoded_header = get_base64_image(HEADER_IMG)
@@ -101,9 +101,8 @@ st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True)
 # ★★★ 修正箇所：スペーサーの背景を白くするCSSを追加 ★★★
 # height: 200px は、 (画像の高さ 180px) + (topで下げた距離 20px) の合計です。
 # ご自身の環境で調整した高さに合わせてください。
-st.markdown("<div style='height: 200px; background-color: white;'></div>", unsafe_allow_html=True) 
+st.markdown("<div style='height: 220px; background-color: white;'></div>", unsafe_allow_html=True) 
 
-st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
 st.markdown("---")
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
