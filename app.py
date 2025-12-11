@@ -122,7 +122,6 @@ st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True)
 # 計算された正確な高さ (例: 370px) を使用します。
 st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '370px')}; background-color: white;'></div>", unsafe_allow_html=True) 
 
-st.markdown("---")
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
 # ----------------------------------------------------
@@ -232,8 +231,6 @@ def on_convert_click(input_value):
 # ----------------------------------------------------
 # ユーザーインターフェース (UI)
 # ----------------------------------------------------
-
-st.markdown("---")
 
 st.markdown("#### 📝 あなたのネガティブな気持ちを、安心してそのまま書き出してください。")
 
