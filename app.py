@@ -34,8 +34,7 @@ def set_custom_background():
     BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
     HEADER_IMG = "unnamed.jpg" 
     
-    # ★★★ 固定ヘッダーの初期高さ設定（画像全体が表示されるよう、必要に応じて値を大きくしてください） ★★★
-    HEADER_HEIGHT = "340px" 
+    HEADER_HEIGHT = "180px" 
     
     encoded_bg = get_base64_image(BG_IMAGE)
     encoded_header = get_base64_image(HEADER_IMG)
@@ -54,23 +53,18 @@ def set_custom_background():
         /* 2. カスタム固定ヘッダーのCSS */
         #custom-fixed-header {{
             position: fixed;
-            top: 20px;
+            /* 例としてトップを20pxに設定（ご自身で調整した数値に置き換えてください） */
+            top: 20px; 
             left: 50%; 
             transform: translateX(-50%); 
             width: 100%;
             max-width: 700px; /* メインコンテンツの幅に合わせる */
-            height: {HEADER_HEIGHT}; /* 高さ設定 */
+            height: {HEADER_HEIGHT}; /* 画像の高さ */
             z-index: 9999; 
             
-            /* ★★★ 修正ポイント 1: 固定領域の背景を透明にする ★★★ */
             background-color: transparent; 
-            
-            /* 画像を背景として適用し、中央に固定 */
             background-image: url("data:image/jpeg;base64,{encoded_header}");
-            
-            /* ★★★ 修正ポイント 2: contain に戻し、画像全体を表示させる ★★★ */
             background-size: contain; 
-            
             background-repeat: no-repeat;
             background-position: center; 
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); 
@@ -104,9 +98,12 @@ set_custom_background()
 # ★★★ 固定ヘッダー用のカスタムDIVを挿入 ★★★
 st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
 
-# ★★★ 固定ヘッダーで隠れるコンテンツを下にずらすためのスペーサー（CSSと高さ一致） ★★★
-st.markdown("<div style='height: 200px;'></div>", unsafe_allow_html=True) 
+# ★★★ 修正箇所：スペーサーの背景を白くするCSSを追加 ★★★
+# height: 200px は、 (画像の高さ 180px) + (topで下げた距離 20px) の合計です。
+# ご自身の環境で調整した高さに合わせてください。
+st.markdown("<div style='height: 200px; background-color: white;'></div>", unsafe_allow_html=True) 
 
+st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
 st.markdown("---")
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
