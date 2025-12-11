@@ -79,17 +79,19 @@ def set_custom_background():
         .main > div {{
             background-color: white !important; 
             padding: 20px; 
-            padding-top: 0px !important; /* ★★★ 修正: メインエリアの上部パディングを削除 ★★★ */
-            margin-top: 0px !important; /* ★★★ 追加: メインエリアの上部マージンも削除 ★★★ */
+            padding-top: 0px !important; 
+            margin-top: 0px !important; 
+            padding-bottom: 20px; /* 下はそのまま */
             border-radius: 10px; 
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
         }}
         
         /* Streamlitのブロック要素も白くして透けを防ぐ */
-        [data-testid="stVerticalBlock"], [data-testid="stHorizontalBlock"] {{
+        [data-testid="stVerticalBlock"], 
+        [data-testid="stVerticalBlock"] > div:first-child {{ /* ★★★ 修正箇所: 親divもターゲットにする ★★★ */
             background-color: white; 
             padding-top: 0px !important; 
-            margin-top: 0px !important; /* ★★★ 追加: ブロックの上部マージンも削除 ★★★ */
+            margin-top: 0px !important; 
             padding-bottom: 0px !important; 
             margin-bottom: 0px !important; 
         }}
@@ -116,7 +118,7 @@ def set_custom_background():
              padding-top: 0px !important;
         }}
         
-        /* ★★★ 追加：H4要素（最初のタイトル）自体のマージンをさらに削る ★★★ */
+        /* H4要素（最初のタイトル）自体のマージンをさらに削る */
         h4:first-of-type {{
              margin-top: 0rem !important;
              padding-top: 0rem !important;
