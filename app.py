@@ -39,8 +39,8 @@ def set_custom_background():
     HEADER_TOP_OFFSET = "40px" # 上から下げた距離
     
     # コンテンツが画像に隠れないようにするためのスペーサーの正確な高さ
-    # 計算: HEADER_HEIGHT (330px) + HEADER_TOP_OFFSET (40px) = 370px
-    SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', ''))) + "px"
+    # 計算: HEADER_HEIGHT (330px) + HEADER_TOP_OFFSET (40px) + 微調整 (10px) = 380px
+    SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', '')) + 10) + "px"
 
     # st.markdownのスペーサーにもこの変数を使います。
     st.session_state['spacer_height'] = SPACER_HEIGHT 
@@ -118,10 +118,12 @@ set_custom_background()
 # ★★★ 固定ヘッダー用のカスタムDIVを挿入 ★★★
 st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
 
-# ★★★ 修正箇所：スペーサーの高さを正確に修正し、背景を白にする ★★★
-# 計算された正確な高さ (例: 370px) を使用します。
-st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '370px')}; background-color: white;'></div>", unsafe_allow_html=True) 
+# ★★★ 修正箇所：スペーサーの高さを正確に修正し、背景を白にする（今回は380px） ★★★
+st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '380px')}; background-color: white;'></div>", unsafe_allow_html=True) 
 
+# タイトルを表示。スペーサー直後にある不要な st.markdown("---") は削除済み。
+st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
+st.markdown("---")
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
 # ----------------------------------------------------
