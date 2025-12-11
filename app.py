@@ -21,7 +21,7 @@ if 'current_review_entry' not in st.session_state:
 st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 
 
-# ★★★ 2. カスタム背景設定用の関数を定義 ★★★
+# ★★★ カスタム背景設定用の関数を定義 ★★★
 def set_custom_background():
     # 使用する背景画像ファイル名を指定
     BACKGROUND_IMAGE = "kabegami_107dotpattern_pi.jpg"
@@ -37,12 +37,33 @@ def set_custom_background():
                 f"""
                 <style>
                 .stApp {{
-                    /* base64エンコードされた画像を背景に設定 */
+                    /* アプリ全体の背景：ドット柄を適用 */
                     background-image: url("data:image/jpeg;base64,{encoded}");
-                    background-size: repeat; /* 画像を繰り返して背景を敷き詰める */
-                    background-attachment: fixed; /* スクロールしても背景を固定する */
-                    background-position: center; /* 背景画像を中央に配置 */
+                    background-size: repeat; 
+                    background-attachment: fixed; 
+                    background-position: center; 
                 }}
+                
+                /* ★★★ ここから追加：コンテンツエリアの背景を白くする（透け防止） ★★★ */
+                /* メインコンテンツエリアの背景を白くする */
+                .main > div {{
+                    background-color: white; /* 白背景 */
+                    padding: 20px; /* 見栄えのための余白 */
+                    border-radius: 10px; /* 角を丸くする */
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 影を付けて浮き上がらせる */
+                }}
+                
+                /* テキスト入力エリアやその他ウィジェットの背景も白くする */
+                section.main div[data-testid="stVerticalBlock"] > div {{
+                    background-color: white; 
+                }}
+
+                /* テキストエリア自体の背景を白くする */
+                .stTextArea textarea {{
+                    background-color: white;
+                }}
+                /* ★★★ ここまで追加 ★★★ */
+
                 </style>
                 """,
                 unsafe_allow_html=True
@@ -54,11 +75,11 @@ def set_custom_background():
         st.error(f"背景設定中にエラーが発生しました: {e}")
 
 # set_page_configの直後でカスタム背景を設定
-set_custom_background() # ★★★ 3. 関数呼び出しを追加 ★★★
+set_custom_background() # カスタム背景の関数を呼び出す
+# ----------------------------------------------------
 
 
-# ******** ★修正箇所★ 画像の追加とエラーハンドリング ********
-# 元の画像の表示は、st.imageを使います
+# ******** ヘッダー画像の追加とエラーハンドリング ********
 IMAGE_PATH = "unnamed.jpg" # アプリのヘッダー画像ファイル名
 try:
     if os.path.exists(IMAGE_PATH):
