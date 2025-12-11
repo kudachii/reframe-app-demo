@@ -24,9 +24,6 @@ st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 def set_custom_background():
     BACKGROUND_IMAGE = "kabegami_107dotpattern_pi.jpg"
     
-    # ヘッダー画像の高さに合わせて調整 (固定エリアのサイズ)
-    HEADER_HEIGHT = "300px" 
-
     try:
         if os.path.exists(BACKGROUND_IMAGE):
             with open(BACKGROUND_IMAGE, "rb") as f:
@@ -37,34 +34,20 @@ def set_custom_background():
                 f"""
                 <style>
                 /* アプリ全体の背景：ドット柄を適用 */
+                /* メインコンテンツエリアの背景にのみドット柄を適用するように変更 */
                 .stApp {{
+                    background-image: none; /* 全体背景を無効化 */
+                }}
+
+                /* メインコンテンツエリアの親要素にドット柄を適用 */
+                .main {{
                     background-image: url("data:image/jpeg;base64,{encoded}");
                     background-size: repeat; 
                     background-attachment: fixed; 
                     background-position: center; 
                 }}
-                
-                /* ★★★ 修正点：固定ヘッダーのCSS（IDで指定） ★★★ */
-                #fixed-header-image {{
-                    position: fixed;
-                    top: 0;
-                    left: 50%; 
-                    transform: translateX(-50%); 
-                    width: 100%;
-                    max-width: 700px; /* メインコンテンツの幅に合わせる */
-                    z-index: 9999; /* 最前面 */
-                    background-color: white; 
-                    padding: 10px 0;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); 
-                    /* st.imageの内部要素の調整 */
-                    line-height: 0; 
-                }}
-                #fixed-header-image img {{
-                    margin-bottom: 0px !important;
-                }}
-                
-                /* ★★★ コンテンツエリアの背景を白くする（透け防止） ★★★ */
-                /* メインコンテンツエリアの背景を白くする */
+
+                /* ★★★ サイドバーにヘッダー画像を固定するため、メインコンテンツの背景を白くするCSSは維持 ★★★ */
                 .main > div {{
                     background-color: white; 
                     padding: 20px; 
@@ -72,14 +55,14 @@ def set_custom_background():
                     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
                 }}
                 
-                /* テキスト入力エリアやその他ウィジェットの背景も白くする */
-                section.main div[data-testid="stVerticalBlock"] > div {{
-                    background-color: white; 
-                }}
-
                 /* テキストエリア自体の背景を白くする */
                 .stTextArea textarea {{
                     background-color: white;
+                }}
+                
+                /* ★★★ サイドバーの幅を調整し、画像を大きく見せる (オプション) ★★★ */
+                section[data-testid="stSidebar"] {{
+                    width: 300px !important; 
                 }}
                 </style>
                 """,
@@ -95,25 +78,24 @@ def set_custom_background():
 set_custom_background() 
 # ----------------------------------------------------
 
-
-# ******** ヘッダー画像の追加とエラーハンドリング ********
+# ******** ★★★ 修正箇所：ヘッダー画像をサイドバーに移動 ★★★ ********
 IMAGE_PATH = "unnamed.jpg" # アプリのヘッダー画像ファイル名
 try:
     if os.path.exists(IMAGE_PATH):
-        # ★★★ 修正点：IDを付与したdivでst.imageを囲む ★★★
-        st.markdown('<div id="fixed-header-image">', unsafe_allow_html=True)
-        st.image(IMAGE_PATH, use_column_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        # st.sidebar を使用し、画像を固定された領域に配置
+        with st.sidebar:
+            # st.sidebar の中は自動的に固定されます
+            st.image(IMAGE_PATH, use_column_width=True)
+            # st.sidebar の下部にタイトルと説明を追加しても良い
+            st.markdown("---")
+            st.caption("Reframe: ポジティブ日記")
+            
     else:
-        st.warning(f"⚠️ 警告: ヘッダー画像ファイル '{IMAGE_PATH}' が見つかりませんでした。ファイル名と配置を確認してください。")
+        st.sidebar.warning(f"⚠️ 警告: ヘッダー画像ファイル '{IMAGE_PATH}' が見つかりませんでした。")
 
 except Exception as e:
-    st.error(f"画像表示中にエラーが発生しました: {e}")
-# *****************************************
-
-# ★★★ 修正点：固定ヘッダーで隠れるコンテンツを下にずらすためのスペーサー ★★★
-# set_custom_background関数内の HEADER_HEIGHT と同じ値 (180px) を指定
-st.markdown("<div style='height: 300px;'></div>", unsafe_allow_html=True) 
+    st.sidebar.error(f"画像表示中にエラーが発生しました: {e}")
+# ***************************************************************
 
 st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
 st.markdown("---")
@@ -122,7 +104,6 @@ st.markdown("---")
 # Gemini APIクライアントの初期化 (元のコードを使用)
 # ----------------------------------------------------
 try:
-    # 環境変数またはst.secretsからAPIキーを取得
     API_KEY = st.secrets["tool"]["GEMINI_API_KEY"] 
     client = genai.Client(api_key=API_KEY)
 except KeyError:
@@ -184,11 +165,9 @@ def reframe_negative_emotion(negative_text):
 # リセット処理用の関数を定義
 # ----------------------------------------------------
 def clear_input_only():
-    # 入力エリアのクリア
     st.session_state["negative_input_key"] = ""
 
 def reset_input():
-    # 入力とレビューエリアのクリア
     clear_input_only()
     st.session_state.current_review_entry = None
 
@@ -222,24 +201,20 @@ def on_convert_click(input_value):
         jst = pytz.timezone('Asia/Tokyo')
         now_jst = datetime.datetime.now(jst)
         
-        # 結果を一時変数に格納
         st.session_state.current_review_entry = {
             "timestamp": now_jst.strftime("%Y/%m/%d %H:%M"),
             "negative": input_value,
             "positive_reframe": converted_result
         }
         
-        # 変換完了後に入力エリアをクリア
         clear_input_only() 
 
 # ----------------------------------------------------
 # ユーザーインターフェース (UI)
 # ----------------------------------------------------
 
-# 日記入力エリアのタイトル 
 st.markdown("#### 📝 あなたのネガティブな気持ちを、安心してそのまま書き出してください。")
 
-# テキスト入力エリア 
 negative_input = st.text_area(
     "（ここは誰にも見られません。心に浮かんだことを自由に。）", 
     height=200,
@@ -247,20 +222,17 @@ negative_input = st.text_area(
     key="negative_input_key" 
 )
 
-# 変換ボタンとリセットボタンを横並びにする
 col1, col2 = st.columns([0.7, 0.3]) 
 
 with col1:
-    # 変換ボタン: コールバック関数を実行
     st.button(
         "✨ **ポジティブに変換する！**", 
         on_click=on_convert_click, 
-        args=[negative_input], # 入力値を引数として渡す
+        args=[negative_input], 
         type="primary"
     )
 
 with col2:
-    # リセットボタン 
     st.button("↩️ もう一度書き直す", on_click=reset_input, key="reset_button") 
 
 # ----------------------------------------------------
@@ -278,7 +250,6 @@ if st.session_state.current_review_entry:
     
     st.markdown("#### **✅ 変換結果（あなたの学びと次の行動）:**")
     
-    # 3要素の構造化表示 
     st.markdown("##### 🧊 1. 事実の客観視（クールダウン）")
     st.info(review_entry['positive_reframe']['fact'])
     
@@ -288,7 +259,6 @@ if st.session_state.current_review_entry:
     st.markdown("##### 👣 3. 今後の具体的な行動案（Next Step）")
     st.warning(review_entry['positive_reframe']['action']) 
     
-    # --- 保存/破棄ボタンの設置 ---
     st.markdown("---")
     
     save_col, discard_col = st.columns([0.5, 0.5])
@@ -323,7 +293,6 @@ if st.session_state.history:
         
         st.caption(f"🗓️ 変換日時: {entry['timestamp']}")
         
-        # 履歴表示エリアは、構造化された辞書の内容を結合して表示
         history_value = (
             f"🧊 1. 事実の客観視: {entry['positive_reframe']['fact']}\n\n"
             f"🌱 2. ポジティブな側面抽出: {entry['positive_reframe']['positive']}\n\n"
