@@ -38,8 +38,7 @@ def set_custom_background():
     HEADER_HEIGHT = "330px"  # 画像の高さ
     HEADER_TOP_OFFSET = "40px" # 上から下げた距離
     
-    # コンテンツが画像に隠れないようにするためのスペーサーの正確な高さ
-    # 正確な高さ (330px + 40px = 370px) に設定
+    # コンテンツが画像に隠れないようにするためのスペーサーの正確な高さ (370px)
     SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', ''))) + "px"
 
     st.session_state['spacer_height'] = SPACER_HEIGHT # 370px に設定
@@ -65,10 +64,9 @@ def set_custom_background():
             left: 50%; 
             transform: translateX(-50%); 
             width: 100%;
-            max-width: 700px; /* メインコンテンツの幅に合わせる */
-            height: {HEADER_HEIGHT}; /* 画像の高さ */
+            max-width: 700px; 
+            height: {HEADER_HEIGHT}; 
             z-index: 9999; 
-            
             background-color: transparent; 
             background-image: url("data:image/jpeg;base64,{encoded_header}");
             background-size: contain; 
@@ -77,11 +75,12 @@ def set_custom_background():
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); 
         }}
         
-        /* 3. コンテンツエリアの背景を白くする（可読性向上） */
+        /* 3. コンテンツエリアの背景を白くする（パディング/マージン調整） */
         .main > div {{
             background-color: white !important; 
             padding: 20px; 
             padding-top: 0px !important; /* ★★★ 修正: メインエリアの上部パディングを削除 ★★★ */
+            margin-top: 0px !important; /* ★★★ 追加: メインエリアの上部マージンも削除 ★★★ */
             border-radius: 10px; 
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
         }}
@@ -89,7 +88,10 @@ def set_custom_background():
         /* Streamlitのブロック要素も白くして透けを防ぐ */
         [data-testid="stVerticalBlock"], [data-testid="stHorizontalBlock"] {{
             background-color: white; 
-            padding-top: 0px !important; /* ★★★ 追加: ブロックの上部パディングも削除 ★★★ */
+            padding-top: 0px !important; 
+            margin-top: 0px !important; /* ★★★ 追加: ブロックの上部マージンも削除 ★★★ */
+            padding-bottom: 0px !important; 
+            margin-bottom: 0px !important; 
         }}
         
         /* フォームの親要素も白くする */
@@ -108,10 +110,16 @@ def set_custom_background():
             display: none !important;
         }}
 
-        /* ヘッダー直後のコンテンツブロックの上マージンを削除 */
+        /* ヘッダー直後のコンテンツブロックの上マージンを削除 (H4の親要素をターゲット) */
         [data-testid="stVerticalBlock"] > div > [data-testid="stMarkdownContainer"]:first-child {{
              margin-top: 0px !important; 
              padding-top: 0px !important;
+        }}
+        
+        /* ★★★ 追加：H4要素（最初のタイトル）自体のマージンをさらに削る ★★★ */
+        h4:first-of-type {{
+             margin-top: 0rem !important;
+             padding-top: 0rem !important;
         }}
         </style>
         """,
