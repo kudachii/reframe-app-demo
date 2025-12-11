@@ -37,7 +37,7 @@ def set_custom_background():
     
     # ★★★ 修正箇所 1: オフセットを 20px に変更 (画像を下にずらす) ★★★
     HEADER_HEIGHT = "330px"  # 画像の高さ
-    HEADER_TOP_OFFSET = "20px" # 上から下げた距離を 20px に変更
+    HEADER_TOP_OFFSET = "10px" # 上から下げた距離を 20px に変更
     
     # ★★★ 修正箇所 2: スペーサーの高さを再計算 (20px + 330px = 350px) ★★★
     SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', ''))) + "px"
