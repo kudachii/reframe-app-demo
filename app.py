@@ -54,7 +54,7 @@ def set_custom_background():
         #custom-fixed-header {{
             position: fixed;
             /* 例としてトップを20pxに設定（ご自身で調整した数値に置き換えてください） */
-            top: 20px; 
+            top: 40px; 
             left: 50%; 
             transform: translateX(-50%); 
             width: 100%;
