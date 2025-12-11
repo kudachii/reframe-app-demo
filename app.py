@@ -36,7 +36,7 @@ def set_custom_background():
     HEADER_IMG = "unnamed.jpg" 
     
     # ★★★ 現在のコードから取得した設定値 ★★★
-    HEADER_HEIGHT = "370px"  # 画像の高さ
+    HEADER_HEIGHT = "300px"  # 画像の高さ
     HEADER_TOP_OFFSET = "0px" # 上から下げた距離
     
     # コンテンツが画像に隠れないようにするためのスペーサーの正確な高さ 
