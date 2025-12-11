@@ -4,14 +4,13 @@ from google import genai
 import os
 import datetime 
 import pytz 
-import base64  # ★★★ 1. base64モジュールをインポートに追加 ★★★
+import base64 
 
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
 # ----------------------------------------------------
 if 'history' not in st.session_state:
     st.session_state['history'] = [] 
-# 一時的なレビュー用エントリをNoneで初期化
 if 'current_review_entry' not in st.session_state:
     st.session_state['current_review_entry'] = None 
 
@@ -25,6 +24,10 @@ st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 def set_custom_background():
     # 使用する背景画像ファイル名を指定
     BACKGROUND_IMAGE = "kabegami_107dotpattern_pi.jpg"
+    
+    # ヘッダー画像の高さを推定し、コンテンツを下げるための値 (px単位)
+    # ※unnamed.jpg の高さに合わせて、この数値を調整してください。
+    HEADER_HEIGHT = "180px" 
 
     # ファイルをbase64でエンコードしてCSSに埋め込む
     try:
@@ -36,21 +39,36 @@ def set_custom_background():
             st.markdown(
                 f"""
                 <style>
+                /* アプリ全体の背景：ドット柄を適用 */
                 .stApp {{
-                    /* アプリ全体の背景：ドット柄を適用 */
                     background-image: url("data:image/jpeg;base64,{encoded}");
                     background-size: repeat; 
                     background-attachment: fixed; 
                     background-position: center; 
                 }}
                 
-                /* ★★★ ここから追加：コンテンツエリアの背景を白くする（透け防止） ★★★ */
+                /* ★★★ ヘッダー画像を固定するためのCSS ★★★ */
+                /* Streamlitの最初の画像ブロックを特定し、固定 */
+                section.main div[data-testid="stImage"]:first-child {{
+                    position: fixed;
+                    top: 0;
+                    left: 50%; 
+                    transform: translateX(-50%); 
+                    width: 100%;
+                    max-width: 700px; /* メインコンテンツの幅に合わせる */
+                    z-index: 999; 
+                    background-color: white; /* 固定時に後ろのドット柄が透けるのを防ぐ */
+                    padding: 10px 0; /* 上下の余白 */
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 固定感のための影 */
+                }}
+
+                /* ★★★ コンテンツエリアの背景を白くする（透け防止） ★★★ */
                 /* メインコンテンツエリアの背景を白くする */
                 .main > div {{
-                    background-color: white; /* 白背景 */
-                    padding: 20px; /* 見栄えのための余白 */
-                    border-radius: 10px; /* 角を丸くする */
-                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 影を付けて浮き上がらせる */
+                    background-color: white; 
+                    padding: 20px; 
+                    border-radius: 10px; 
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
                 }}
                 
                 /* テキスト入力エリアやその他ウィジェットの背景も白くする */
@@ -62,8 +80,6 @@ def set_custom_background():
                 .stTextArea textarea {{
                     background-color: white;
                 }}
-                /* ★★★ ここまで追加 ★★★ */
-
                 </style>
                 """,
                 unsafe_allow_html=True
@@ -75,7 +91,7 @@ def set_custom_background():
         st.error(f"背景設定中にエラーが発生しました: {e}")
 
 # set_page_configの直後でカスタム背景を設定
-set_custom_background() # カスタム背景の関数を呼び出す
+set_custom_background() 
 # ----------------------------------------------------
 
 
@@ -91,6 +107,10 @@ except Exception as e:
     st.error(f"画像表示中にエラーが発生しました: {e}")
 # *****************************************
 
+# ★★★ 修正ポイント：固定ヘッダーで隠れるコンテンツを下にずらすためのスペーサー ★★★
+# set_custom_background関数内の HEADER_HEIGHT と同じ値を入れて、コンテンツ全体を下にずらします。
+st.markdown("<div style='height: 180px;'></div>", unsafe_allow_html=True) 
+
 st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
 st.markdown("---")
 
@@ -105,7 +125,7 @@ except KeyError:
     st.error("APIクライアントの初期化に失敗しました。シークレット設定を確認してください。")
     st.stop()
 except Exception as e:
-    st.error(f"APIクライアントの初期化に失敗しました。エラー: {e}")
+    st.error(f"APIクライアントの初期化に失敗しました: {e}")
     st.stop()    
 
 # ----------------------------------------------------
