@@ -34,7 +34,7 @@ def set_custom_background():
     BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
     HEADER_IMG = "unnamed.jpg" 
     
-    # ★★★ 固定ヘッダーの初期高さ設定（必要に応じて調整してください） ★★★
+    # ★★★ 固定ヘッダーの初期高さ設定（画像全体が表示されるよう、必要に応じて値を大きくしてください） ★★★
     HEADER_HEIGHT = "180px" 
     
     encoded_bg = get_base64_image(BG_IMAGE)
@@ -61,13 +61,15 @@ def set_custom_background():
             max-width: 700px; /* メインコンテンツの幅に合わせる */
             height: {HEADER_HEIGHT}; /* 高さ設定 */
             z-index: 9999; 
-            background-color: white; 
+            
+            /* ★★★ 修正ポイント 1: 固定領域の背景を透明にする ★★★ */
+            background-color: transparent; 
             
             /* 画像を背景として適用し、中央に固定 */
             background-image: url("data:image/jpeg;base64,{encoded_header}");
             
-            /* ★★★ 修正ポイント：contain から cover に変更し、余白をなくす ★★★ */
-            background-size: cover; 
+            /* ★★★ 修正ポイント 2: contain に戻し、画像全体を表示させる ★★★ */
+            background-size: contain; 
             
             background-repeat: no-repeat;
             background-position: center; 
@@ -99,7 +101,7 @@ def set_custom_background():
 set_custom_background() 
 # ----------------------------------------------------
 
-# ★★★ 固定ヘッダー用のカスタムDIVを挿入 (画像はCSSの背景として適用済み) ★★★
+# ★★★ 固定ヘッダー用のカスタムDIVを挿入 ★★★
 st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
 
 # ★★★ 固定ヘッダーで隠れるコンテンツを下にずらすためのスペーサー（CSSと高さ一致） ★★★
