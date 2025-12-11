@@ -25,7 +25,7 @@ def set_custom_background():
     BACKGROUND_IMAGE = "kabegami_107dotpattern_pi.jpg"
     
     # ヘッダー画像の高さに合わせて調整 (固定エリアのサイズ)
-    HEADER_HEIGHT = "180px" 
+    HEADER_HEIGHT = "220px" 
 
     try:
         if os.path.exists(BACKGROUND_IMAGE):
