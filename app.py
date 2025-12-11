@@ -32,6 +32,7 @@ st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 # ★★★ カスタム背景設定用の関数を定義 ★★★
 def set_custom_background():
     BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
+    # ※unnamed.jpgはアップロードされていないため、ファイル名がunnamed.jpgであると仮定します。
     HEADER_IMG = "unnamed.jpg" 
     
     # ★★★ 現在のコードから取得した設定値 ★★★
@@ -39,11 +40,10 @@ def set_custom_background():
     HEADER_TOP_OFFSET = "40px" # 上から下げた距離
     
     # コンテンツが画像に隠れないようにするためのスペーサーの正確な高さ 
-    # 修正: 370px (330+40) から 15px 減らして 355px に調整し、次のコンテンツを上に引き込む
-    # この-15pxが、残っている隙間を埋めるための「食い込み」です。
-    SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', '')) - 15) + "px"
+    # 修正：コンテンツが隠れないように、正しい高さ (330+40) = 370px に戻す
+    SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', ''))) + "px"
 
-    st.session_state['spacer_height'] = SPACER_HEIGHT # 今回は 355px に設定
+    st.session_state['spacer_height'] = SPACER_HEIGHT # 370px に設定
     
     encoded_bg = get_base64_image(BG_IMAGE)
     encoded_header = get_base64_image(HEADER_IMG)
@@ -122,7 +122,7 @@ def set_custom_background():
         
         /* H4要素（最初のタイトル）自体のマージンをさらに削る */
         h4:first-of-type {{
-             margin-top: 0rem !important; /* ネガティブマージンが必要ならここに -5px などを追加 */
+             margin-top: -15px !important; /* ★★★ 修正：ネガティブマージンを強化し、隙間を吸収 ★★★ */
              padding-top: 0rem !important;
         }}
         </style>
@@ -136,8 +136,8 @@ set_custom_background()
 # ★★★ 固定ヘッダー用のカスタムDIVを挿入 ★★★
 st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
 
-# ★★★ スペーサーの高さ (355px) ★★★
-st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '355px')}; background-color: white;'></div>", unsafe_allow_html=True) 
+# ★★★ スペーサーの高さ (370px) ★★★
+st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '370px')}; background-color: white;'></div>", unsafe_allow_html=True) 
 
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
