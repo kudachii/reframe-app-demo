@@ -9,6 +9,7 @@ import base64
 # 画像ファイルをbase64エンコードするヘルパー関数
 def get_base64_image(image_path):
     try:
+        # ファイル名が 'unnamed.jpg' または 'kabegami_107dotpattern_pi.jpg' であることを前提とします
         if os.path.exists(image_path):
             with open(image_path, "rb") as f:
                 return base64.b64encode(f.read()).decode()
@@ -32,7 +33,6 @@ st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 # ★★★ カスタム背景設定用の関数を定義 ★★★
 def set_custom_background():
     BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
-    # ※unnamed.jpgはアップロードされていないため、ファイル名がunnamed.jpgであると仮定します。
     HEADER_IMG = "unnamed.jpg" 
     
     # ★★★ 現在のコードから取得した設定値 ★★★
@@ -40,7 +40,7 @@ def set_custom_background():
     HEADER_TOP_OFFSET = "40px" # 上から下げた距離
     
     # コンテンツが画像に隠れないようにするためのスペーサーの正確な高さ 
-    # 修正：コンテンツが隠れないように、正しい高さ (330+40) = 370px に戻す
+    # 正しい高さ (330+40) = 370px
     SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', ''))) + "px"
 
     st.session_state['spacer_height'] = SPACER_HEIGHT # 370px に設定
@@ -122,7 +122,7 @@ def set_custom_background():
         
         /* H4要素（最初のタイトル）自体のマージンをさらに削る */
         h4:first-of-type {{
-             margin-top: -15px !important; /* ★★★ 修正：ネガティブマージンを強化し、隙間を吸収 ★★★ */
+             margin-top: -25px !important; /* ★★★ 修正：ネガティブマージンを大幅に強化し、隙間を吸収 ★★★ */
              padding-top: 0rem !important;
         }}
         </style>
