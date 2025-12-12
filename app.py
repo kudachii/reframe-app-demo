@@ -41,15 +41,16 @@ def set_custom_style(background_image_file):
             background-position: center;
         }}
         /* コンテンツエリア全体に半透明の白のオーバーレイと角丸を適用 (コントラスト改善) */
+        /* .main > div.block-container はメインコンテナの要素を指します */
         .main > div.block-container {{
-            background-color: rgba(255, 255, 255, 0.9); /* 白を90%の透明度で適用 */
+            background-color: rgba(255, 255, 255, 0.85); /* 白を85%の透明度で適用 */
             padding: 30px;
             border-radius: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }}
         /* 入力エリア、ボタン、コード表示の背景も読みやすくする */
         .stTextArea, .stCode, .stTextInput, .stButton > button {{
-            background-color: rgba(255, 255, 255, 0.98) !important;
+            background-color: rgba(255, 255, 255, 0.95) !important;
             border-radius: 8px;
         }}
         /* 履歴部分のテキストエリアをより目立たせる */
@@ -69,22 +70,23 @@ def set_custom_style(background_image_file):
 st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 
 # --- ファイル名を指定 ---
-BACKGROUND_FILE = "cherry_blossom_bg.jpg" # 桜の背景画像ファイル名に修正
-LOGO_FILE = "untitle.png"                 # ロゴ画像ファイル名に修正
+BACKGROUND_FILE = "background.jpg" # 背景画像ファイル名
+LOGO_FILE = "logo_title.png"    # ロゴ画像ファイル名
 
 set_custom_style(BACKGROUND_FILE)
 
 # ----------------------------------------------------
 # タイトルロゴの表示
 # ----------------------------------------------------
+# ロゴ画像をコンテンツの一番上に表示します (幅を画面中央に小さく表示)
 try:
     if os.path.exists(LOGO_FILE):
         # ロゴ画像が配置されている場合は表示
         st.image(LOGO_FILE, width=400) # ロゴの表示幅を調整
     else:
         # ロゴがない場合は、仮のタイトルを表示
-        st.title("💡 Reframe: ポジティブ変換日記 (ロゴ画像未配置)") 
-        st.markdown(f"### **ロゴ画像ファイルが見つかりません: {LOGO_FILE}**")
+        st.title("💡 Reframe: ポジティブ変換日記 (仮タイトル)") 
+        st.markdown("### **ロゴ画像ファイルが見つかりません: logo_title.png**")
 
 except Exception:
     pass 
