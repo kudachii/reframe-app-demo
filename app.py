@@ -5,12 +5,10 @@ import os
 import datetime
 import pytz
 import base64
-import time # timeモジュールを追加（APIエラー時の待機用など）
+import time 
 
-# 画像ファイルをbase64エンコードするヘルパー関数
+# 画像ファイルをbase64エンコードするヘルパー関数 (今回は使用せず残す)
 def get_base64_image(image_path):
-    # 画像ファイルが不要になったため、この関数は今回は使用しません。
-    # ただし、元のコード構造を維持するために残しておきます。
     try:
         if os.path.exists(image_path):
             with open(image_path, "rb") as f:
@@ -33,21 +31,19 @@ if 'current_review_entry' not in st.session_state:
 # ----------------------------------------------------
 st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 
-# カスタム画像表示（元のコードの場所に戻しています）
+# カスタム画像表示（モバイルでの入力不具合を避けるため、固定表示CSSは削除済み）
 try:
     st.image("unnamed.jpg", use_column_width=True)
 except FileNotFoundError:
-    # 画像固定表示のCSSがないため、Xアプリ内ブラウザでも問題なく動作します
     st.warning("⚠️ 画像ファイルが見つかりません: unnamed.jpg。ファイル名とパスを確認してください。")
 
 st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
 st.markdown("---")
 
 # ----------------------------------------------------
-# Gemini APIクライアントの初期化 (元のコードを使用)
+# Gemini APIクライアントの初期化
 # ----------------------------------------------------
 try:
-    # 環境変数またはst.secretsからAPIキーを取得
     API_KEY = st.secrets["tool"]["GEMINI_API_KEY"] 
     client = genai.Client(api_key=API_KEY)
 except KeyError:
@@ -61,7 +57,7 @@ except Exception as e:
 # 感情をポジティブに変換する関数 (コア機能) 
 # ----------------------------------------------------
 def reframe_negative_emotion(negative_text):
-    # ★★★ 修正箇所：多言語対応プロンプトに変更 ★★★
+    # ★★★ 多言語対応プロンプト ★★★
     system_prompt = """
     あなたは、ユーザーの精神的安全性を高めるための優秀なAIメンターです。
     ユーザーが入力したネガティブな感情や出来事に対し、**入力された言語と同じ言語で**、以下の厳格な3つの形式で分析し、ポジティブな再構築をしてください。
@@ -85,11 +81,9 @@ def reframe_negative_emotion(negative_text):
         
         # --- AIの出力文字列を3つの要素に分割し、辞書で返す ---
         try:
-            # 1. '2.' で分割
             fact_and_rest = raw_text.split("2. ", 1)
             fact = fact_and_rest[0].strip().replace("1. ", "").replace("**", "")
             
-            # 2. '3.' で分割
             positive_and_action = fact_and_rest[1].split("3. ", 1)
             positive = positive_and_action[0].strip().replace("**", "")
             action = positive_and_action[1].strip().replace("**", "")
@@ -101,44 +95,44 @@ def reframe_negative_emotion(negative_text):
             }
 
         except Exception:
-            # 分割失敗時も、AIの生テキストをポジティブエリアに表示
             return {"fact": "分析エラー", "positive": raw_text, "action": "分割失敗: AIの出力形式をご確認ください"}
 
     except Exception as e:
-        # APIエラーが発生した場合
         return {"fact": "APIエラー", "positive": f"Gemini API実行エラーが発生しました: {e}", "action": "ー"}
 
 # ----------------------------------------------------
-# リセット処理用の関数を定義
+# リセット、保存、破棄処理用の関数を定義
 # ----------------------------------------------------
 def clear_input_only():
-    # 入力エリアのクリア
     st.session_state["negative_input_key"] = ""
 
 def reset_input():
-    # 入力とレビューエリアのクリア
     clear_input_only()
     st.session_state.current_review_entry = None
 
-# ----------------------------------------------------
-# 保存処理用の関数を定義
-# ----------------------------------------------------
 def save_entry():
     if st.session_state.current_review_entry:
         st.session_state.history.insert(0, st.session_state.current_review_entry)
         st.session_state.current_review_entry = None
         st.toast("✅ 日記が保存されました！", icon='💾')
 
-# ----------------------------------------------------
-# 破棄処理用の関数を定義
-# ----------------------------------------------------
 def discard_entry():
     st.session_state.current_review_entry = None
     st.toast("🗑️ 変換結果は破棄されました。新しい日記をどうぞ。", icon='✍️')
 
+# ★★★ 履歴の削除処理用の関数を定義 ★★★
+def delete_entry(timestamp_to_delete):
+    """指定されたタイムスタンプを持つエントリを履歴から削除する"""
+    # 削除対象以外のエントリを新しいリストとして保持する
+    new_history = [
+        entry for entry in st.session_state.history 
+        if entry['timestamp'] != timestamp_to_delete
+    ]
+    st.session_state.history = new_history
+    st.toast("🗑️ 日記エントリを削除しました。", icon='🚮')
 # ----------------------------------------------------
+
 # 変換ボタンのコールバック関数
-# ----------------------------------------------------
 def on_convert_click(input_value):
     if not input_value:
         st.warning("⚠️ 何か出来事を入力してください。あなたの心が待っています。")
@@ -150,45 +144,37 @@ def on_convert_click(input_value):
         jst = pytz.timezone('Asia/Tokyo')
         now_jst = datetime.datetime.now(jst)
         
-        # 結果を一時変数に格納
         st.session_state.current_review_entry = {
             "timestamp": now_jst.strftime("%Y/%m/%d %H:%M"),
             "negative": input_value,
             "positive_reframe": converted_result
         }
         
-        # 変換完了後に入力エリアをクリア
         clear_input_only() 
 
 # ----------------------------------------------------
 # ユーザーインターフェース (UI)
 # ----------------------------------------------------
-
-# 日記入力エリアのタイトル 
 st.markdown("#### 📝 あなたのネガティブな気持ちを、安心してそのまま書き出してください。")
 
-# テキスト入力エリア 
 negative_input = st.text_area(
     "（ここは誰にも見られません。心に浮かんだことを自由に。）", 
     height=200,
-    placeholder="例：面接で年齢の懸念を突っ込まれて、自信を失いそうになった。今日のCWのテストライティングは不採用だった。\n\nまたは、'I failed my driving test today and I feel discouraged.'",
+    placeholder="例：面接で年齢の懸念を突っ込まれて、自信を失いそうになった。\n\nまたは、'I failed my driving test today and I feel discouraged.'",
     key="negative_input_key" 
 )
 
-# 変換ボタンとリセットボタンを横並びにする
 col1, col2 = st.columns([0.7, 0.3]) 
 
 with col1:
-    # 変換ボタン: コールバック関数を実行
     st.button(
         "✨ **ポジティブに変換する！**", 
         on_click=on_convert_click, 
-        args=[negative_input], # 入力値を引数として渡す
+        args=[negative_input], 
         type="primary"
     )
 
 with col2:
-    # リセットボタン 
     st.button("↩️ もう一度書き直す", on_click=reset_input, key="reset_button") 
 
 # ----------------------------------------------------
@@ -206,7 +192,6 @@ if st.session_state.current_review_entry:
     
     st.markdown("#### **✅ 変換結果（あなたの学びと次の行動）:**")
     
-    # 3要素の構造化表示 
     st.markdown("##### 🧊 1. 事実の客観視（クールダウン）")
     st.info(review_entry['positive_reframe']['fact'])
     
@@ -216,7 +201,6 @@ if st.session_state.current_review_entry:
     st.markdown("##### 👣 3. 今後の具体的な行動案（Next Step）")
     st.warning(review_entry['positive_reframe']['action']) 
     
-    # --- 保存/破棄ボタンの設置 ---
     st.markdown("---")
     
     save_col, discard_col = st.columns([0.5, 0.5])
@@ -242,16 +226,31 @@ if st.session_state.current_review_entry:
 
 
 # ----------------------------------------------------
-# 履歴の表示エリア (UIの最後)
+# 履歴の表示エリア (UIの最後) - ★★★ 削除機能実装済み ★★★
 # ----------------------------------------------------
 st.subheader("📚 過去のポジティブ変換日記（保存済み）")
 
 if st.session_state.history:
-    for entry in st.session_state.history: 
+    for i, entry in enumerate(st.session_state.history): 
         
-        st.caption(f"🗓️ 変換日時: {entry['timestamp']}")
+        # 削除ボタンと履歴内容を横並びにするためのカラム設定
+        col_ts, col_del = st.columns([0.8, 0.2])
         
-        # 履歴表示エリアは、構造化された辞書の内容を結合して表示
+        # タイムスタンプの表示
+        with col_ts:
+            st.caption(f"🗓️ 変換日時: {entry['timestamp']}")
+        
+        # 削除ボタンの設置
+        with col_del:
+            # uniqueなキーを生成し、コールバック関数に削除対象のtimestampを渡す
+            st.button(
+                "削除", 
+                key=f"delete_btn_{entry['timestamp']}", 
+                on_click=delete_entry,
+                args=[entry['timestamp']]
+            )
+        
+        # 履歴の内容を表示
         history_value = (
             f"🧊 1. 事実の客観視: {entry['positive_reframe']['fact']}\n\n"
             f"🌱 2. ポジティブな側面抽出: {entry['positive_reframe']['positive']}\n\n"
