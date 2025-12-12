@@ -2,14 +2,28 @@
 import streamlit as st
 from google import genai
 import os
-import datetime 
-import pytz 
+import datetime
+import pytz
+import base64
+import time # timeモジュールを追加（APIエラー時の待機用など）
 
+# 画像ファイルをbase64エンコードするヘルパー関数
+def get_base64_image(image_path):
+    # 画像ファイルが不要になったため、この関数は今回は使用しません。
+    # ただし、元のコード構造を維持するために残しておきます。
+    try:
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as f:
+                return base64.b64encode(f.read()).decode()
+    except Exception:
+        return ""
+    return ""
+    
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
 # ----------------------------------------------------
 if 'history' not in st.session_state:
-    st.session_state['history'] = [] 
+    st.session_state['history'] = []
 # 一時的なレビュー用エントリをNoneで初期化
 if 'current_review_entry' not in st.session_state:
     st.session_state['current_review_entry'] = None 
@@ -19,13 +33,12 @@ if 'current_review_entry' not in st.session_state:
 # ----------------------------------------------------
 st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 
-# ******** ★修正箇所★ 画像の追加 ********
-# 注: 画像ファイル「unnamed.jpg」がStreamlitアプリの実行ディレクトリにあることを確認してください。
+# カスタム画像表示（元のコードの場所に戻しています）
 try:
     st.image("unnamed.jpg", use_column_width=True)
 except FileNotFoundError:
+    # 画像固定表示のCSSがないため、Xアプリ内ブラウザでも問題なく動作します
     st.warning("⚠️ 画像ファイルが見つかりません: unnamed.jpg。ファイル名とパスを確認してください。")
-# *****************************************
 
 st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
 st.markdown("---")
@@ -48,10 +61,11 @@ except Exception as e:
 # 感情をポジティブに変換する関数 (コア機能) 
 # ----------------------------------------------------
 def reframe_negative_emotion(negative_text):
+    # ★★★ 修正箇所：多言語対応プロンプトに変更 ★★★
     system_prompt = """
     あなたは、ユーザーの精神的安全性を高めるための優秀なAIメンターです。
-    ユーザーが入力したネガティブな感情や出来事に対し、以下の厳格な3つの形式で分析し、ポジティブな再構築をしてください。
-    
+    ユーザーが入力したネガティブな感情や出来事に対し、**入力された言語と同じ言語で**、以下の厳格な3つの形式で分析し、ポジティブな再構築をしてください。
+
     【出力形式】
     1. 事実の客観視: (事実のみを簡潔に要約)
     2. ポジティブな側面抽出: (この出来事からあなたが優しさや強さを得た点、成長できた点を抽出します。ユーザーの頑張りや努力を認め、共感し、励ますような、温かく寄り添う口調で前向きな言葉を使って表現してください。)
@@ -87,9 +101,11 @@ def reframe_negative_emotion(negative_text):
             }
 
         except Exception:
+            # 分割失敗時も、AIの生テキストをポジティブエリアに表示
             return {"fact": "分析エラー", "positive": raw_text, "action": "分割失敗: AIの出力形式をご確認ください"}
 
     except Exception as e:
+        # APIエラーが発生した場合
         return {"fact": "APIエラー", "positive": f"Gemini API実行エラーが発生しました: {e}", "action": "ー"}
 
 # ----------------------------------------------------
@@ -155,7 +171,7 @@ st.markdown("#### 📝 あなたのネガティブな気持ちを、安心して
 negative_input = st.text_area(
     "（ここは誰にも見られません。心に浮かんだことを自由に。）", 
     height=200,
-    placeholder="例：面接で年齢の懸念を突っ込まれて、自信を失いそうになった。今日のCWのテストライティングは不採用だった。\n\nここはあなたの安全地帯です。",
+    placeholder="例：面接で年齢の懸念を突っ込まれて、自信を失いそうになった。今日のCWのテストライティングは不採用だった。\n\nまたは、'I failed my driving test today and I feel discouraged.'",
     key="negative_input_key" 
 )
 
