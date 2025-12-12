@@ -2,9 +2,9 @@
 import streamlit as st
 from google import genai
 import os
-import datetime 
-import pytz 
-import base64 
+import datetime
+import pytz
+import base64
 
 # 画像ファイルをbase64エンコードするヘルパー関数
 def get_base64_image(image_path):
@@ -21,9 +21,9 @@ def get_base64_image(image_path):
 # 履歴機能のためのセッションステートの初期化 
 # ----------------------------------------------------
 if 'history' not in st.session_state:
-    st.session_state['history'] = [] 
+    st.session_state['history'] = []
 if 'current_review_entry' not in st.session_state:
-    st.session_state['current_review_entry'] = None 
+    st.session_state['current_review_entry'] = None
 
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
@@ -33,16 +33,14 @@ st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 # ★★★ カスタム背景設定用の関数を定義 ★★★
 def set_custom_background():
     BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
-    HEADER_IMG = "unnamed.jpg" 
+    HEADER_IMG = "unnamed.jpg"
     
-    # ★★★ 修正箇所 1: オフセットを 20px に変更 (画像を下にずらす) ★★★
-    HEADER_HEIGHT = "330px"  # 画像の高さ
-    HEADER_TOP_OFFSET = "10px" # 上から下げた距離を 20px に変更
+    HEADER_HEIGHT = "330px"
+    HEADER_TOP_OFFSET = "10px"
     
-    # ★★★ 修正箇所 2: スペーサーの高さを再計算 (20px + 330px = 350px) ★★★
     SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', ''))) + "px"
 
-    st.session_state['spacer_height'] = SPACER_HEIGHT # 350px に設定
+    st.session_state['spacer_height'] = SPACER_HEIGHT
     
     encoded_bg = get_base64_image(BG_IMAGE)
     encoded_header = get_base64_image(HEADER_IMG)
@@ -53,18 +51,19 @@ def set_custom_background():
         /* 1. アプリ全体の背景：ドット柄を適用 */
         .stApp {{
             background-image: url("data:image/jpeg;base64,{encoded_bg}");
-            background-size: repeat; 
-            background-attachment: fixed; 
-            background-position: center; 
+            background-size: repeat;
+            background-attachment: fixed;
+            background-position: center;
         }}
         
         /* 2. カスタム固定ヘッダーのCSS */
         #custom-fixed-header {{
             position: fixed;
-            top: {HEADER_TOP_OFFSET}; /* 20pxが適用される */
+            top: {HEADER_TOP_OFFSET};
             left: 50%; 
-            transform: translateX(-50%); 
-            width: 100%;
+            transform: translateX(-50%);
+            /* 【修正点A】widthを画面幅（viewport）基準に変更し、スマホで画面いっぱいに表示させる */
+            width: 95vw; 
             max-width: 700px; 
             height: {HEADER_HEIGHT}; 
             z-index: 9999; 
@@ -72,11 +71,11 @@ def set_custom_background():
             background-image: url("data:image/jpeg;base64,{encoded_header}");
             background-size: contain; 
             background-repeat: no-repeat;
-            background-position: center; 
+            background-position: top center; /* 画像の位置を中央上部へ */
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); 
         }}
         
-        /* 3. コンテンツエリアの背景を白くする（パディング/マージン調整） */
+        /* 3. コンテンツエリアの背景を白くする */
         .main > div {{
             background-color: white !important; 
             padding: 20px; 
@@ -85,9 +84,12 @@ def set_custom_background():
             padding-bottom: 20px; 
             border-radius: 10px; 
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+            /* 【修正点B】全体のマックス幅を設定し、コンテンツが横に広がりすぎないようにする（必要に応じて調整） */
+            max-width: 700px; 
         }}
         
         /* Streamlitのブロック要素も白くして透けを防ぐ */
+        /* 【修正点C】文字が透明に見える問題を防ぐため、テキスト色を強制的に黒に設定 */
         [data-testid="stVerticalBlock"], 
         [data-testid="stVerticalBlock"] > div:first-child {{ 
             background-color: white; 
@@ -95,17 +97,15 @@ def set_custom_background():
             margin-top: 0px !important; 
             padding-bottom: 0px !important; 
             margin-bottom: 0px !important; 
+            color: black !important;
         }}
         
-        /* フォームの親要素も白くする */
-        [data-testid="stForm"] {{
+        /* フォーム、テキストエリア、Markdownも文字色を保証 */
+        [data-testid="stForm"], 
+        .stTextArea textarea,
+        .stMarkdown {{
             background-color: white;
-            padding: 0;
-        }}
-        
-        /* テキストエリア自体の背景を白くする */
-        .stTextArea textarea {{
-            background-color: white;
+            color: black !important;
         }}
         
         /* 4. サイドバーの領域を完全に非表示にする */
@@ -113,23 +113,23 @@ def set_custom_background():
             display: none !important;
         }}
 
-        /* ヘッダー直後のコンテンツブロックの上マージンを削除 (H4の親要素をターゲット) */
-        [data-testid="stVerticalBlock"] > div > [data-testid="stMarkdownContainer"]:first-child {{
-             margin-top: 0px !important; 
-             padding-top: 0px !important;
-        }}
-        
         /* H4要素（最初のタイトル）自体のマージンをさらに削る */
         h4:first-of-type {{
-             margin-top: -25px !important; /* テキストの密着度を維持 */
+             margin-top: -25px !important;
              padding-top: 0rem !important;
+             color: black !important; /* 文字色を黒に */
+        }}
+        
+        /* コードブロック内のテキストも黒にする */
+        .stCode code {{
+            color: black !important;
         }}
         </style>
         """,
         unsafe_allow_html=True
     )
 
-set_custom_background() 
+set_custom_background()
 # ----------------------------------------------------
 
 # ★★★ 固定ヘッダー用のカスタムDIVを挿入 ★★★
@@ -212,8 +212,8 @@ def reset_input():
 def save_entry():
     if st.session_state.current_review_entry:
         st.session_state.history.insert(0, st.session_state.current_review_entry)
-        st.session_state.current_review_entry = None
-        st.toast("✅ 日記が保存されました！", icon='💾')
+    st.session_state.current_review_entry = None
+    st.toast("✅ 日記が保存されました！", icon='💾')
 
 # ----------------------------------------------------
 # 破棄処理用の関数を定義
