@@ -2,96 +2,142 @@
 import streamlit as st
 from google import genai
 import os
-import datetime 
-import pytz 
-import base64 
+import datetime
+import pytz
+import base64
 
+# 画像ファイルをbase64エンコードするヘルパー関数
+def get_base64_image(image_path):
+    try:
+        # ファイル名が 'unnamed.jpg' または 'kabegami_107dotpattern_pi.jpg' であることを前提とします
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as f:
+                return base64.b64encode(f.read()).decode()
+    except Exception:
+        return ""
+    return ""
+    
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
 # ----------------------------------------------------
 if 'history' not in st.session_state:
-    st.session_state['history'] = [] 
+    st.session_state['history'] = []
 if 'current_review_entry' not in st.session_state:
-    st.session_state['current_review_entry'] = None 
-
-# ----------------------------------------------------
-# 背景画像（CSS）設定用の関数とコントラスト改善CSS
-# ----------------------------------------------------
-def set_custom_style(background_image_file):
-    
-    # 1. 背景画像設定 (Base64 + CSS)
-    try:
-        data = ""
-        # ファイルが存在する場合のみBase64エンコード
-        if os.path.exists(background_image_file):
-            with open(background_image_file, "rb") as f:
-                data = base64.b64encode(f.read()).decode("utf-8")
-        else:
-            st.warning(f"⚠️ **重要:** 背景画像ファイル '{background_image_file}' が見つかりませんでした。ファイル名を確認してください。")
-
-        # 2. カスタムCSSの定義
-        css = f"""
-        <style>
-        /* 全体の背景設定 */
-        .stApp {{
-            background-image: url("data:image/jpeg;base64,{data}");
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-            background-position: center;
-        }}
-        /* コンテンツエリア全体に半透明の白のオーバーレイと角丸を適用 (コントラスト改善) */
-        /* .main > div.block-container はメインコンテナの要素を指します */
-        .main > div.block-container {{
-            background-color: rgba(255, 255, 255, 0.85); /* 白を85%の透明度で適用 */
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }}
-        /* 入力エリア、ボタン、コード表示の背景も読みやすくする */
-        .stTextArea, .stCode, .stTextInput, .stButton > button {{
-            background-color: rgba(255, 255, 255, 0.95) !important;
-            border-radius: 8px;
-        }}
-        /* 履歴部分のテキストエリアをより目立たせる */
-        div[data-testid="stTextarea"] {{
-            border: 1px solid #ddd;
-        }}
-        </style>
-        """
-        st.markdown(css, unsafe_allow_html=True)
-        
-    except Exception as e:
-        st.error(f"デザイン設定中にエラーが発生しました: {e}")
+    st.session_state['current_review_entry'] = None
 
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
 # ----------------------------------------------------
 st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 
-# --- ファイル名を指定 ---
-BACKGROUND_FILE = "background.jpg" # 背景画像ファイル名
-LOGO_FILE = "logo_title.png"    # ロゴ画像ファイル名
+# ★★★ カスタム背景設定用の関数を定義 ★★★
+def set_custom_background():
+    BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
+    HEADER_IMG = "unnamed.jpg"
+    
+    HEADER_HEIGHT = "330px"
+    HEADER_TOP_OFFSET = "10px"
+    
+    SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', ''))) + "px"
 
-set_custom_style(BACKGROUND_FILE)
+    st.session_state['spacer_height'] = SPACER_HEIGHT
+    
+    encoded_bg = get_base64_image(BG_IMAGE)
+    encoded_header = get_base64_image(HEADER_IMG)
 
+    st.markdown(
+        f"""
+        <style>
+        /* 1. アプリ全体の背景：ドット柄を適用 */
+        .stApp {{
+            background-image: url("data:image/jpeg;base64,{encoded_bg}");
+            background-size: repeat;
+            background-attachment: fixed;
+            background-position: center;
+        }}
+        
+        /* 2. カスタム固定ヘッダーのCSS */
+        #custom-fixed-header {{
+            position: fixed;
+            top: {HEADER_TOP_OFFSET};
+            left: 50%; 
+            transform: translateX(-50%);
+            /* 【修正点A】widthを画面幅（viewport）基準に変更し、スマホで画面いっぱいに表示させる */
+            width: 95vw; 
+            max-width: 700px; 
+            height: {HEADER_HEIGHT}; 
+            z-index: 9999; 
+            background-color: transparent; 
+            background-image: url("data:image/jpeg;base64,{encoded_header}");
+            background-size: contain; 
+            background-repeat: no-repeat;
+            background-position: top center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); 
+            
+            /* 【修正点E】ポインターイベントを無効化し、ヘッダーが入力フィールドをブロックするのを防ぐ */
+            pointer-events: none; 
+        }}
+        
+        /* 3. コンテンツエリアの背景を白くする */
+        .main > div {{
+            background-color: white !important; 
+            padding: 20px; 
+            padding-top: 0px !important; 
+            margin-top: 0px !important; 
+            padding-bottom: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+            max-width: 700px; 
+        }}
+        
+        /* Streamlitのブロック要素も白くして透けを防ぎ、文字色を黒に保証 */
+        [data-testid="stVerticalBlock"], 
+        [data-testid="stVerticalBlock"] > div:first-child {{ 
+            background-color: white; 
+            padding-top: 0px !important; 
+            margin-top: 0px !important; 
+            padding-bottom: 0px !important; 
+            margin-bottom: 0px !important; 
+            color: black !important;
+        }}
+        
+        /* フォーム、テキストエリア、Markdownも文字色を保証 */
+        [data-testid="stForm"], 
+        .stTextArea textarea,
+        .stMarkdown {{
+            background-color: white;
+            color: black !important;
+        }}
+        
+        /* 4. サイドバーの領域を完全に非表示にする */
+        section[data-testid="stSidebar"] {{
+            display: none !important;
+        }}
+
+        /* H4要素（最初のタイトル）自体のマージンをさらに削り、文字色を保証 */
+        h4:first-of-type {{
+             margin-top: -25px !important;
+             padding-top: 0rem !important;
+             color: black !important;
+        }}
+        
+        /* コードブロック内のテキストも黒にする */
+        .stCode code {{
+            color: black !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+set_custom_background()
 # ----------------------------------------------------
-# タイトルロゴの表示
-# ----------------------------------------------------
-# ロゴ画像をコンテンツの一番上に表示します (幅を画面中央に小さく表示)
-try:
-    if os.path.exists(LOGO_FILE):
-        # ロゴ画像が配置されている場合は表示
-        st.image(LOGO_FILE, width=400) # ロゴの表示幅を調整
-    else:
-        # ロゴがない場合は、仮のタイトルを表示
-        st.title("💡 Reframe: ポジティブ変換日記 (仮タイトル)") 
-        st.markdown("### **ロゴ画像ファイルが見つかりません: logo_title.png**")
 
-except Exception:
-    pass 
+# ★★★ 固定ヘッダー用のカスタムDIVを挿入 ★★★
+st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
 
-st.markdown("---") 
+# ★★★ スペーサーの高さ (350px) ★★★
+st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '350px')}; background-color: white;'></div>", unsafe_allow_html=True) 
 
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
@@ -103,7 +149,7 @@ except KeyError:
     st.error("APIクライアントの初期化に失敗しました。シークレット設定を確認してください。")
     st.stop()
 except Exception as e:
-    st.error(f"APIクライアントの初期化に失敗しました。エラー: {e}")
+    st.error(f"APIクライアントの初期化に失敗しました: {e}")
     st.stop()    
 
 # ----------------------------------------------------
@@ -133,11 +179,8 @@ def reframe_negative_emotion(negative_text):
         
         # --- AIの出力文字列を3つの要素に分割し、辞書で返す ---
         try:
-            # 1. '2.' で分割
             fact_and_rest = raw_text.split("2. ", 1)
             fact = fact_and_rest[0].strip().replace("1. ", "").replace("**", "")
-            
-            # 2. '3.' で分割
             positive_and_action = fact_and_rest[1].split("3. ", 1)
             positive = positive_and_action[0].strip().replace("**", "")
             action = positive_and_action[1].strip().replace("**", "")
@@ -170,8 +213,8 @@ def reset_input():
 def save_entry():
     if st.session_state.current_review_entry:
         st.session_state.history.insert(0, st.session_state.current_review_entry)
-        st.session_state.current_review_entry = None
-        st.toast("✅ 日記が保存されました！", icon='💾')
+    st.session_state.current_review_entry = None
+    st.toast("✅ 日記が保存されました！", icon='💾')
 
 # ----------------------------------------------------
 # 破棄処理用の関数を定義
@@ -206,6 +249,7 @@ def on_convert_click(input_value):
 # ユーザーインターフェース (UI)
 # ----------------------------------------------------
 
+# CSSの調整により、ヘッダー直後にこの要素が隙間なく続きます。
 st.markdown("#### 📝 あなたのネガティブな気持ちを、安心してそのまま書き出してください。")
 
 negative_input = st.text_area(
@@ -221,7 +265,7 @@ with col1:
     st.button(
         "✨ **ポジティブに変換する！**", 
         on_click=on_convert_click, 
-        args=[negative_input],
+        args=[negative_input], 
         type="primary"
     )
 
@@ -229,7 +273,7 @@ with col2:
     st.button("↩️ もう一度書き直す", on_click=reset_input, key="reset_button") 
 
 # ----------------------------------------------------
-# 変換結果レビューエリア
+# 変換結果レビューエリア (UIの続き)
 # ----------------------------------------------------
 st.markdown("---")
 if st.session_state.current_review_entry:
@@ -277,7 +321,7 @@ if st.session_state.current_review_entry:
 
 
 # ----------------------------------------------------
-# 履歴の表示エリア
+# 履歴の表示エリア (UIの最後)
 # ----------------------------------------------------
 st.subheader("📚 過去のポジティブ変換日記（保存済み）")
 
