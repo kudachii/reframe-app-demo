@@ -2,154 +2,47 @@
 import streamlit as st
 from google import genai
 import os
-import datetime
-import pytz
-import base64
+import datetime 
+import pytz 
 
-# 画像ファイルをbase64エンコードするヘルパー関数
-def get_base64_image(image_path):
-    try:
-        # ファイル名が 'unnamed.jpg' または 'kabegami_107dotpattern_pi.jpg' であることを前提とします
-        if os.path.exists(image_path):
-            with open(image_path, "rb") as f:
-                return base64.b64encode(f.read()).decode()
-    except Exception:
-        return ""
-    return ""
-    
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化 
 # ----------------------------------------------------
 if 'history' not in st.session_state:
-    st.session_state['history'] = []
+    st.session_state['history'] = [] 
+# 一時的なレビュー用エントリをNoneで初期化
 if 'current_review_entry' not in st.session_state:
-    st.session_state['current_review_entry'] = None
+    st.session_state['current_review_entry'] = None 
 
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
 # ----------------------------------------------------
 st.set_page_config(page_title="Reframe: 安心の一歩", layout="centered")
 
-# ★★★ カスタム背景設定用の関数を定義 ★★★
-def set_custom_background():
-    BG_IMAGE = "kabegami_107dotpattern_pi.jpg"
-    HEADER_IMG = "unnamed.jpg"
-    
-    HEADER_HEIGHT = "330px"
-    HEADER_TOP_OFFSET = "10px"
-    
-    SPACER_HEIGHT = str(int(HEADER_HEIGHT.replace('px', '')) + int(HEADER_TOP_OFFSET.replace('px', ''))) + "px"
+# ******** ★修正箇所★ 画像の追加 ********
+# 注: 画像ファイル「unnamed.jpg」がStreamlitアプリの実行ディレクトリにあることを確認してください。
+try:
+    st.image("unnamed.jpg", use_column_width=True)
+except FileNotFoundError:
+    st.warning("⚠️ 画像ファイルが見つかりません: unnamed.jpg。ファイル名とパスを確認してください。")
+# *****************************************
 
-    st.session_state['spacer_height'] = SPACER_HEIGHT
-    
-    encoded_bg = get_base64_image(BG_IMAGE)
-    encoded_header = get_base64_image(HEADER_IMG)
-
-    st.markdown(
-        f"""
-        <style>
-        /* 1. アプリ全体の背景：ドット柄を適用 */
-        .stApp {{
-            background-image: url("data:image/jpeg;base64,{encoded_bg}");
-            background-size: repeat;
-            background-attachment: fixed;
-            background-position: center;
-        }}
-        
-        /* 2. カスタム固定ヘッダーのCSS */
-        #custom-fixed-header {{
-            position: fixed;
-            top: {HEADER_TOP_OFFSET};
-            left: 50%; 
-            transform: translateX(-50%);
-            /* 【修正点A】widthを画面幅（viewport）基準に変更し、スマホで画面いっぱいに表示させる */
-            width: 95vw; 
-            max-width: 700px; 
-            height: {HEADER_HEIGHT}; 
-            z-index: 9999; 
-            background-color: transparent; 
-            background-image: url("data:image/jpeg;base64,{encoded_header}");
-            background-size: contain; 
-            background-repeat: no-repeat;
-            background-position: top center;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); 
-            
-            /* 【修正点E】ポインターイベントを無効化し、ヘッダーが入力フィールドをブロックするのを防ぐ */
-            pointer-events: none; 
-        }}
-        
-        /* 3. コンテンツエリアの背景を白くする */
-        .main > div {{
-            background-color: white !important; 
-            padding: 20px; 
-            padding-top: 0px !important; 
-            margin-top: 0px !important; 
-            padding-bottom: 20px; 
-            border-radius: 10px; 
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
-            max-width: 700px; 
-        }}
-        
-        /* Streamlitのブロック要素も白くして透けを防ぎ、文字色を黒に保証 */
-        [data-testid="stVerticalBlock"], 
-        [data-testid="stVerticalBlock"] > div:first-child {{ 
-            background-color: white; 
-            padding-top: 0px !important; 
-            margin-top: 0px !important; 
-            padding-bottom: 0px !important; 
-            margin-bottom: 0px !important; 
-            color: black !important;
-        }}
-        
-        /* フォーム、テキストエリア、Markdownも文字色を保証 */
-        [data-testid="stForm"], 
-        .stTextArea textarea,
-        .stMarkdown {{
-            background-color: white;
-            color: black !important;
-        }}
-        
-        /* 4. サイドバーの領域を完全に非表示にする */
-        section[data-testid="stSidebar"] {{
-            display: none !important;
-        }}
-
-        /* H4要素（最初のタイトル）自体のマージンをさらに削り、文字色を保証 */
-        h4:first-of-type {{
-             margin-top: -25px !important;
-             padding-top: 0rem !important;
-             color: black !important;
-        }}
-        
-        /* コードブロック内のテキストも黒にする */
-        .stCode code {{
-            color: black !important;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-set_custom_background()
-# ----------------------------------------------------
-
-# ★★★ 固定ヘッダー用のカスタムDIVを挿入 ★★★
-st.markdown('<div id="custom-fixed-header"></div>', unsafe_allow_html=True) 
-
-# ★★★ スペーサーの高さ (350px) ★★★
-st.markdown(f"<div style='height: {st.session_state.get('spacer_height', '350px')}; background-color: white;'></div>", unsafe_allow_html=True) 
+st.title("💡 Reframe: ポジティブ変換日記")
+st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
+st.markdown("---")
 
 # ----------------------------------------------------
 # Gemini APIクライアントの初期化 (元のコードを使用)
 # ----------------------------------------------------
 try:
+    # 環境変数またはst.secretsからAPIキーを取得
     API_KEY = st.secrets["tool"]["GEMINI_API_KEY"] 
     client = genai.Client(api_key=API_KEY)
 except KeyError:
     st.error("APIクライアントの初期化に失敗しました。シークレット設定を確認してください。")
     st.stop()
 except Exception as e:
-    st.error(f"APIクライアントの初期化に失敗しました: {e}")
+    st.error(f"APIクライアントの初期化に失敗しました。エラー: {e}")
     st.stop()    
 
 # ----------------------------------------------------
@@ -179,8 +72,11 @@ def reframe_negative_emotion(negative_text):
         
         # --- AIの出力文字列を3つの要素に分割し、辞書で返す ---
         try:
+            # 1. '2.' で分割
             fact_and_rest = raw_text.split("2. ", 1)
             fact = fact_and_rest[0].strip().replace("1. ", "").replace("**", "")
+            
+            # 2. '3.' で分割
             positive_and_action = fact_and_rest[1].split("3. ", 1)
             positive = positive_and_action[0].strip().replace("**", "")
             action = positive_and_action[1].strip().replace("**", "")
@@ -201,9 +97,11 @@ def reframe_negative_emotion(negative_text):
 # リセット処理用の関数を定義
 # ----------------------------------------------------
 def clear_input_only():
+    # 入力エリアのクリア
     st.session_state["negative_input_key"] = ""
 
 def reset_input():
+    # 入力とレビューエリアのクリア
     clear_input_only()
     st.session_state.current_review_entry = None
 
@@ -213,8 +111,8 @@ def reset_input():
 def save_entry():
     if st.session_state.current_review_entry:
         st.session_state.history.insert(0, st.session_state.current_review_entry)
-    st.session_state.current_review_entry = None
-    st.toast("✅ 日記が保存されました！", icon='💾')
+        st.session_state.current_review_entry = None
+        st.toast("✅ 日記が保存されました！", icon='💾')
 
 # ----------------------------------------------------
 # 破棄処理用の関数を定義
@@ -237,21 +135,24 @@ def on_convert_click(input_value):
         jst = pytz.timezone('Asia/Tokyo')
         now_jst = datetime.datetime.now(jst)
         
+        # 結果を一時変数に格納
         st.session_state.current_review_entry = {
             "timestamp": now_jst.strftime("%Y/%m/%d %H:%M"),
             "negative": input_value,
             "positive_reframe": converted_result
         }
         
+        # 変換完了後に入力エリアをクリア
         clear_input_only() 
 
 # ----------------------------------------------------
 # ユーザーインターフェース (UI)
 # ----------------------------------------------------
 
-# CSSの調整により、ヘッダー直後にこの要素が隙間なく続きます。
+# 日記入力エリアのタイトル 
 st.markdown("#### 📝 あなたのネガティブな気持ちを、安心してそのまま書き出してください。")
 
+# テキスト入力エリア 
 negative_input = st.text_area(
     "（ここは誰にも見られません。心に浮かんだことを自由に。）", 
     height=200,
@@ -259,17 +160,20 @@ negative_input = st.text_area(
     key="negative_input_key" 
 )
 
+# 変換ボタンとリセットボタンを横並びにする
 col1, col2 = st.columns([0.7, 0.3]) 
 
 with col1:
+    # 変換ボタン: コールバック関数を実行
     st.button(
         "✨ **ポジティブに変換する！**", 
         on_click=on_convert_click, 
-        args=[negative_input], 
+        args=[negative_input], # 入力値を引数として渡す
         type="primary"
     )
 
 with col2:
+    # リセットボタン 
     st.button("↩️ もう一度書き直す", on_click=reset_input, key="reset_button") 
 
 # ----------------------------------------------------
@@ -287,6 +191,7 @@ if st.session_state.current_review_entry:
     
     st.markdown("#### **✅ 変換結果（あなたの学びと次の行動）:**")
     
+    # 3要素の構造化表示 
     st.markdown("##### 🧊 1. 事実の客観視（クールダウン）")
     st.info(review_entry['positive_reframe']['fact'])
     
@@ -296,6 +201,7 @@ if st.session_state.current_review_entry:
     st.markdown("##### 👣 3. 今後の具体的な行動案（Next Step）")
     st.warning(review_entry['positive_reframe']['action']) 
     
+    # --- 保存/破棄ボタンの設置 ---
     st.markdown("---")
     
     save_col, discard_col = st.columns([0.5, 0.5])
@@ -330,6 +236,7 @@ if st.session_state.history:
         
         st.caption(f"🗓️ 変換日時: {entry['timestamp']}")
         
+        # 履歴表示エリアは、構造化された辞書の内容を結合して表示
         history_value = (
             f"🧊 1. 事実の客観視: {entry['positive_reframe']['fact']}\n\n"
             f"🌱 2. ポジティブな側面抽出: {entry['positive_reframe']['positive']}\n\n"
