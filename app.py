@@ -17,7 +17,7 @@ def get_base64_image(image_path):
         return ""
     return ""
     
-# ★★★ テーマの定義を追加 ★★★
+# ★★★ テーマの定義とレポート格納キーの初期化 ★★★
 THEMES = ["選択なし", "仕事・キャリア", "人間関係", "自己成長", "健康・メンタル"] 
 
 # ----------------------------------------------------
@@ -25,12 +25,12 @@ THEMES = ["選択なし", "仕事・キャリア", "人間関係", "自己成長
 # ----------------------------------------------------
 if 'history' not in st.session_state:
     st.session_state['history'] = []
-# 一時的なレビュー用エントリをNoneで初期化
 if 'current_review_entry' not in st.session_state:
     st.session_state['current_review_entry'] = None
-# 連続記録を保持するための初期化を追加
 if 'positive_streak' not in st.session_state:
     st.session_state['positive_streak'] = 0
+if 'monthly_report' not in st.session_state:
+    st.session_state['monthly_report'] = None # 月間レポートの結果を格納
 
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
@@ -43,7 +43,7 @@ try:
 except FileNotFoundError:
     st.warning("⚠️ 画像ファイルが見つかりません: unnamed.jpg。ファイル名とパスを確認してください。")
 
-# キャッチフレーズの文字サイズを調整 (Ver. 4.2 修正点)
+# キャッチフレーズの文字サイズを調整
 st.markdown(
     "<p style='font-size: 1.1em; font-weight: bold;'>あなたの「心の重さ」を、成長と行動に変換する安全な場所。</p>",
     unsafe_allow_html=True
@@ -61,11 +61,13 @@ st.markdown("---")
 # Gemini APIクライアントの初期化
 # ----------------------------------------------------
 try:
+    # APIキーが存在しない場合に備えてエラー処理を強化
+    if "GEMINI_API_KEY" not in st.secrets.get("tool", {}):
+        st.error("APIクライアントの初期化に失敗しました。シークレット設定にGEMINI_API_KEYがありません。")
+        st.stop()
+        
     API_KEY = st.secrets["tool"]["GEMINI_API_KEY"] 
     client = genai.Client(api_key=API_KEY)
-except KeyError:
-    st.error("APIクライアントの初期化に失敗しました。シークレット設定を確認してください。")
-    st.stop()
 except Exception as e:
     st.error(f"APIクライアントの初期化に失敗しました。エラー: {e}")
     st.stop()    
@@ -116,7 +118,6 @@ def reframe_negative_emotion(negative_text):
     except Exception as e:
         return {"fact": "APIエラー", "positive": f"Gemini API実行エラーが発生しました: {e}", "action": "ー"}
 
-
 # ----------------------------------------------------
 # 連続記録の計算ロジック
 # ----------------------------------------------------
@@ -125,7 +126,6 @@ def calculate_streak(history_list):
     if not history_list:
         return 0
 
-    # 履歴から重複のない日付（YYYY/MM/DD形式）のリストを作成し、降順にソート
     unique_dates = sorted(list(set(entry['date_only'] for entry in history_list if 'date_only' in entry)), reverse=True)
     
     if not unique_dates:
@@ -134,7 +134,6 @@ def calculate_streak(history_list):
     streak = 0
     jst = pytz.timezone('Asia/Tokyo')
     today = datetime.datetime.now(jst).date()
-    
     current_date_to_check = today
     
     for date_str in unique_dates:
@@ -152,6 +151,76 @@ def calculate_streak(history_list):
     return streak
 
 # ----------------------------------------------------
+# 月間レポートを生成する関数 (Ver. 4.3 新規追加)
+# ----------------------------------------------------
+def generate_monthly_report(history_list):
+    jst = pytz.timezone('Asia/Tokyo')
+    today = datetime.datetime.now(jst)
+    
+    start_date = today - datetime.timedelta(days=30)
+    
+    recent_entries = []
+    for entry in history_list:
+        try:
+            entry_date_str = entry.get('date_only', entry['timestamp'].split(" ")[0])
+            entry_date = datetime.datetime.strptime(entry_date_str, "%Y/%m/%d").date()
+            
+            # 日付を比較するために naive datetime に変換 (tz情報は除去)
+            if entry_date >= start_date.date():
+                recent_entries.append(entry)
+        except Exception:
+            continue
+            
+    if not recent_entries:
+        return "履歴が不足しています。", "過去30日間のデータがありません。もう少し記録を続けてみましょう。", "ー"
+
+    report_text = f"【過去30日間のポジティブ日記（合計{len(recent_entries)}件）】\n\n"
+    
+    for i, entry in enumerate(recent_entries):
+        report_text += f"--- 記録 {i+1} ({entry.get('selected_theme', 'テーマ不明')}) ---\n"
+        report_text += f"元の出来事: {entry['negative']}\n"
+        report_text += f"変換後の行動案: {entry['positive_reframe']['action']}\n"
+        report_text += f"変換後のポジティブ側面: {entry['positive_reframe']['positive'][:50]}...\n\n" 
+
+    system_prompt = f"""
+    あなたは、ユーザーの行動と成長を分析する専門家です。
+    ユーザーの過去30日間の日記データから、以下の3つの視点で分析した「月間レポート」を生成してください。
+
+    【レポートの形式】
+    1. 最も多かったテーマと傾向: (どのテーマの記録が多かったか、その記録から共通する傾向や課題を簡潔に要約)
+    2. 行動と成長の総評: (ユーザーが頑張っていた点、行動案を通して達成したと思われる小さな進歩、成長した側面を温かい言葉で総評)
+    3. 次の30日間の重点目標: (抽出された傾向に基づき、次の30日で意識すべき具体的な目標を一つ提案)
+
+    必ずこの3つの要素を「1.」「2.」「3.」で始まる形式で出力し、それ以外の説明や挨拶は一切含めないでください。
+    """
+    
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[
+                {"role": "user", "parts": [{"text": system_prompt + "\n\n分析対象データ:\n" + report_text}]}
+            ]
+        )
+        raw_text = response.text
+        
+        try:
+            theme_and_rest = raw_text.split("2. ", 1)
+            theme = theme_and_rest[0].strip().replace("1. ", "").replace("**", "")
+            
+            summary_and_goal = theme_and_rest[1].split("3. ", 1)
+            summary = summary_and_goal[0].strip().replace("**", "")
+            goal = summary_and_goal[1].strip().replace("**", "")
+
+            return theme, summary, goal
+
+        except Exception:
+            return "解析エラー", "AIの出力形式が予期せぬものでした。", raw_text
+
+    except Exception as e:
+        return "APIエラー", f"Gemini API実行エラーが発生しました: {e}", "ー"
+# ----------------------------------------------------
+
+# ----------------------------------------------------
 # リセット、保存、破棄処理用の関数を定義
 # ----------------------------------------------------
 def clear_input_only():
@@ -164,27 +233,24 @@ def reset_input():
 def save_entry():
     if st.session_state.current_review_entry:
         
-        # タイムスタンプから日付のみ（YYYY/MM/DD）を抽出
         timestamp_full = st.session_state.current_review_entry['timestamp'] 
         date_only = timestamp_full.split(" ")[0]
         
-        # エントリに日付のみのデータ 'date_only' を追加
         st.session_state.current_review_entry['date_only'] = date_only
         
-        # 履歴の先頭に保存
         st.session_state.history.insert(0, st.session_state.current_review_entry)
         
-        # 連続記録を再計算して更新
         st.session_state.positive_streak = calculate_streak(st.session_state.history)
         
         st.session_state.current_review_entry = None
+        # レポートを保存したら、古いレポートはリセット
+        st.session_state['monthly_report'] = None 
         st.toast("✅ 日記が保存されました！", icon='💾')
 
 def discard_entry():
     st.session_state.current_review_entry = None
     st.toast("🗑️ 変換結果は破棄されました。新しい日記をどうぞ。", icon='✍️')
 
-# 履歴の削除処理用の関数を定義
 def delete_entry(timestamp_to_delete):
     """指定されたタイムスタンプを持つエントリを履歴から削除する"""
     new_history = [
@@ -193,8 +259,8 @@ def delete_entry(timestamp_to_delete):
     ]
     st.session_state.history = new_history
     
-    # 削除後、連続記録を再計算
     st.session_state.positive_streak = calculate_streak(st.session_state.history)
+    st.session_state['monthly_report'] = None # 履歴が変わったらレポートもリセット
     
     st.toast("🗑️ 日記エントリを削除しました。", icon='🚮')
 # ----------------------------------------------------
@@ -215,7 +281,7 @@ def on_convert_click(input_value):
             "timestamp": now_jst.strftime("%Y/%m/%d %H:%M"),
             "negative": input_value,
             "positive_reframe": converted_result,
-            "selected_theme": THEMES[0] # 初期値として「選択なし」を設定 (Ver. 4.2 修正点)
+            "selected_theme": THEMES[0] 
         }
         
         clear_input_only() 
@@ -271,13 +337,12 @@ if st.session_state.current_review_entry:
     
     st.markdown("---")
     
-    # ★★★ テーマ選択 UI (Ver. 4.2 新規追加) ★★★
+    # テーマ選択 UI
     selected_theme = st.selectbox(
         "🏷️ この出来事を分類するテーマを選んでください。", 
         options=THEMES, 
         key="theme_selector_key"
     )
-    # 選択されたテーマを current_review_entry に反映
     st.session_state.current_review_entry['selected_theme'] = selected_theme
     
     st.markdown("---")
@@ -305,11 +370,47 @@ if st.session_state.current_review_entry:
 
 
 # ----------------------------------------------------
+# 月間レポートエリア (Ver. 4.3 新規追加)
+# ----------------------------------------------------
+st.subheader("📊 成長と行動の月間レポート")
+
+if st.button("✨ 過去30日間を振り返るレポートを生成する"):
+    if len(st.session_state.history) < 1: # 記録は1件から可能とする
+        st.warning("レポートを生成するには、最低1つ以上の記録が必要です。")
+    else:
+        with st.spinner("過去の記録を分析し、レポートを作成中..."):
+            theme, summary, goal = generate_monthly_report(st.session_state.history)
+            
+            st.session_state['monthly_report'] = {
+                "theme": theme,
+                "summary": summary,
+                "goal": goal
+            }
+            st.toast("✅ 月間レポートが完成しました！", icon='📈')
+
+# レポート表示エリア
+if 'monthly_report' in st.session_state and st.session_state['monthly_report']:
+    report = st.session_state['monthly_report']
+    st.markdown("#### **月間レポート（過去30日間）**")
+    
+    st.markdown("##### 1. 最も多かったテーマと傾向")
+    st.info(report['theme'])
+    
+    st.markdown("##### 2. 行動と成長の総評")
+    st.success(report['summary'])
+    
+    st.markdown("##### 3. 次の30日間の重点目標")
+    st.warning(report['goal'])
+    
+    st.markdown("---")
+# ----------------------------------------------------
+
+# ----------------------------------------------------
 # 履歴の表示エリア (UIの最後)
 # ----------------------------------------------------
 st.subheader("📚 過去のポジティブ変換日記（保存済み）")
 
-# ★★★ 履歴フィルタリング UI (Ver. 4.2 新規追加) ★★★
+# 履歴フィルタリング UI
 filter_theme = st.selectbox(
     "テーマで絞り込む", 
     options=["すべてのテーマ"] + THEMES, 
@@ -321,26 +422,20 @@ filter_theme = st.selectbox(
 if filter_theme == "すべてのテーマ":
     filtered_history = st.session_state.history
 else:
-    # 選択なし("選択なし")もフィルタリング対象に含める
     filtered_history = [
         entry for entry in st.session_state.history 
         if entry.get('selected_theme') == filter_theme
     ]
 
 if filtered_history:
-    # for i, entry in enumerate(filtered_history): に変更
     for i, entry in enumerate(filtered_history): 
         
-        # 削除ボタンと履歴内容を横並びにするためのカラム設定
         col_ts, col_del = st.columns([0.8, 0.2])
         
-        # タイムスタンプの表示
         with col_ts:
-            # ★★★ テーマの表示を追加 ★★★
             theme_display = entry.get('selected_theme', 'テーマ不明')
             st.caption(f"🗓️ 変換日時: {entry['timestamp']} | 🏷️ テーマ: **{theme_display}**")
         
-        # 削除ボタンの設置
         with col_del:
             st.button(
                 "削除", 
@@ -349,7 +444,6 @@ if filtered_history:
                 args=[entry['timestamp']]
             )
         
-        # 履歴の内容を表示
         history_value = (
             f"🧊 1. 事実の客観視: {entry['positive_reframe']['fact']}\n\n"
             f"🌱 2. ポジティブな側面抽出: {entry['positive_reframe']['positive']}\n\n"
