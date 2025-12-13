@@ -25,11 +25,9 @@ if 'history' not in st.session_state:
 # 一時的なレビュー用エントリをNoneで初期化
 if 'current_review_entry' not in st.session_state:
     st.session_state['current_review_entry'] = None
-
 # ★★★ 連続記録を保持するための初期化を追加 ★★★
 if 'positive_streak' not in st.session_state:
     st.session_state['positive_streak'] = 0
-# ★★★ 'last_saved_date'は、calculate_streakで履歴から動的に計算するため不要 (今回はhistoryのみで計算) ★★★
 
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
@@ -42,7 +40,11 @@ try:
 except FileNotFoundError:
     st.warning("⚠️ 画像ファイルが見つかりません: unnamed.jpg。ファイル名とパスを確認してください。")
 
-st.markdown("### **あなたの「心の重さ」を、成長と行動に変換する安全な場所。**")
+# ★★★ 修正箇所：st.markdown を HTML/CSS に変更し、文字サイズを調整 ★★★
+st.markdown(
+    "<p style='font-size: 1.1em; font-weight: bold;'>あなたの「心の重さ」を、成長と行動に変換する安全な場所。</p>",
+    unsafe_allow_html=True
+)
 st.markdown("---")
 
 # ★★★ 連続記録の表示を追加 ★★★
@@ -96,7 +98,7 @@ def reframe_negative_emotion(negative_text):
             fact_and_rest = raw_text.split("2. ", 1)
             fact = fact_and_rest[0].strip().replace("1. ", "").replace("**", "")
             
-            positive_and_action = positive_and_action = fact_and_rest[1].split("3. ", 1)
+            positive_and_action = fact_and_rest[1].split("3. ", 1)
             positive = positive_and_action[0].strip().replace("**", "")
             action = positive_and_action[1].strip().replace("**", "")
 
@@ -122,6 +124,7 @@ def calculate_streak(history_list):
         return 0
 
     # 履歴から重複のない日付（YYYY/MM/DD形式）のリストを作成し、降順にソート
+    # 'date_only'キーが存在するもののみを対象とする
     unique_dates = sorted(list(set(entry['date_only'] for entry in history_list if 'date_only' in entry)), reverse=True)
     
     if not unique_dates:
@@ -153,7 +156,6 @@ def calculate_streak(history_list):
         elif entry_date < current_date_to_check:
             # 日付が飛んでいるため、連続記録は途切れる
             break
-        # entry_date > current_date_to_check は、unique_datesが降順のため発生しないはず
         
     return streak
 
@@ -170,11 +172,9 @@ def reset_input():
 def save_entry():
     if st.session_state.current_review_entry:
         
-        # ★★★ save_entry関数を修正し、連続記録に必要な 'date_only' を追加 ★★★
-        
         # タイムスタンプから日付のみ（YYYY/MM/DD）を抽出
-        timestamp_full = st.session_state.current_review_entry['timestamp'] # 例: 2025/12/13 09:24
-        date_only = timestamp_full.split(" ")[0] # 例: 2025/12/13
+        timestamp_full = st.session_state.current_review_entry['timestamp'] 
+        date_only = timestamp_full.split(" ")[0]
         
         # エントリに日付のみのデータ 'date_only' を追加
         st.session_state.current_review_entry['date_only'] = date_only
@@ -202,7 +202,7 @@ def delete_entry(timestamp_to_delete):
     ]
     st.session_state.history = new_history
     
-    # ★★★ 削除後、連続記録を再計算 ★★★
+    # 削除後、連続記録を再計算
     st.session_state.positive_streak = calculate_streak(st.session_state.history)
     
     st.toast("🗑️ 日記エントリを削除しました。", icon='🚮')
@@ -222,7 +222,6 @@ def on_convert_click(input_value):
         
         st.session_state.current_review_entry = {
             "timestamp": now_jst.strftime("%Y/%m/%d %H:%M"),
-            # 'date_only'はsave_entryで追加されるため、ここでは不要
             "negative": input_value,
             "positive_reframe": converted_result
         }
@@ -341,7 +340,6 @@ if st.session_state.history:
             label_visibility="collapsed",
             key=f"history_area_{entry['timestamp']}"
         )
-        # ★★★ 連続記録のため、ここに日付情報を含めておくのが親切です ★★★
         st.caption(f"元のネガティブ内容 ({entry.get('date_only', '日付不明')} 記録): {entry['negative']}")
         st.caption("✨ **コピーのヒント:** 上のエリアをクリックし、Ctrl+A → Ctrl+C で素早くコピーできます。")
         st.markdown("---")
