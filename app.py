@@ -17,7 +17,7 @@ def get_base64_image(image_path):
         return ""
     return ""
     
-# ★★★ テーマの定義とレポート格納キーの初期化 ★★★
+# ★★★ テーマの定義 ★★★
 THEMES = ["選択なし", "仕事・キャリア", "人間関係", "自己成長", "健康・メンタル"] 
 
 # ----------------------------------------------------
@@ -30,7 +30,7 @@ if 'current_review_entry' not in st.session_state:
 if 'positive_streak' not in st.session_state:
     st.session_state['positive_streak'] = 0
 if 'monthly_report' not in st.session_state:
-    st.session_state['monthly_report'] = None # 月間レポートの結果を格納
+    st.session_state['monthly_report'] = None 
 
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
@@ -61,7 +61,6 @@ st.markdown("---")
 # Gemini APIクライアントの初期化
 # ----------------------------------------------------
 try:
-    # APIキーが存在しない場合に備えてエラー処理を強化
     if "GEMINI_API_KEY" not in st.secrets.get("tool", {}):
         st.error("APIクライアントの初期化に失敗しました。シークレット設定にGEMINI_API_KEYがありません。")
         st.stop()
@@ -151,7 +150,7 @@ def calculate_streak(history_list):
     return streak
 
 # ----------------------------------------------------
-# 月間レポートを生成する関数 (Ver. 4.3 新規追加)
+# 月間レポートを生成する関数
 # ----------------------------------------------------
 def generate_monthly_report(history_list):
     jst = pytz.timezone('Asia/Tokyo')
@@ -165,7 +164,6 @@ def generate_monthly_report(history_list):
             entry_date_str = entry.get('date_only', entry['timestamp'].split(" ")[0])
             entry_date = datetime.datetime.strptime(entry_date_str, "%Y/%m/%d").date()
             
-            # 日付を比較するために naive datetime に変換 (tz情報は除去)
             if entry_date >= start_date.date():
                 recent_entries.append(entry)
         except Exception:
@@ -221,6 +219,36 @@ def generate_monthly_report(history_list):
 # ----------------------------------------------------
 
 # ----------------------------------------------------
+# 履歴をCSV形式に変換する関数 (Ver. 4.4 新規追加)
+# ----------------------------------------------------
+def convert_history_to_csv(history_list):
+    """セッション履歴をCSV形式の文字列に変換する"""
+    if not history_list:
+        return ""
+
+    # ヘッダー行
+    header = "タイムスタンプ,日付,テーマ,元のネガティブな出来事,1.客観視(事実),2.ポジティブな側面,3.具体的な行動案\n"
+    csv_data = header
+
+    for entry in history_list:
+        # CSVのセル内でカンマや改行が含まれないよう、ダブルクォーテーションで囲む
+        timestamp = entry.get('timestamp', '').replace(',', '，')
+        date_only = entry.get('date_only', '').replace(',', '，')
+        theme = entry.get('selected_theme', 'テーマ不明').replace(',', '，')
+        
+        # 複数行のテキストデータはダブルクォーテーションで囲み、内部のダブルクォーテーションはエスケープ（""）
+        negative = f'"{entry.get("negative", "").replace('"', '""')}"'
+        fact = f'"{entry["positive_reframe"]["fact"].replace('"', '""')}"'
+        positive = f'"{entry["positive_reframe"]["positive"].replace('"', '""')}"'
+        action = f'"{entry["positive_reframe"]["action"].replace('"', '""')}"'
+        
+        row = f"{timestamp},{date_only},{theme},{negative},{fact},{positive},{action}\n"
+        csv_data += row
+
+    return csv_data
+# ----------------------------------------------------
+
+# ----------------------------------------------------
 # リセット、保存、破棄処理用の関数を定義
 # ----------------------------------------------------
 def clear_input_only():
@@ -243,7 +271,6 @@ def save_entry():
         st.session_state.positive_streak = calculate_streak(st.session_state.history)
         
         st.session_state.current_review_entry = None
-        # レポートを保存したら、古いレポートはリセット
         st.session_state['monthly_report'] = None 
         st.toast("✅ 日記が保存されました！", icon='💾')
 
@@ -260,7 +287,7 @@ def delete_entry(timestamp_to_delete):
     st.session_state.history = new_history
     
     st.session_state.positive_streak = calculate_streak(st.session_state.history)
-    st.session_state['monthly_report'] = None # 履歴が変わったらレポートもリセット
+    st.session_state['monthly_report'] = None 
     
     st.toast("🗑️ 日記エントリを削除しました。", icon='🚮')
 # ----------------------------------------------------
@@ -370,12 +397,12 @@ if st.session_state.current_review_entry:
 
 
 # ----------------------------------------------------
-# 月間レポートエリア (Ver. 4.3 新規追加)
+# 月間レポートエリア 
 # ----------------------------------------------------
 st.subheader("📊 成長と行動の月間レポート")
 
 if st.button("✨ 過去30日間を振り返るレポートを生成する"):
-    if len(st.session_state.history) < 1: # 記録は1件から可能とする
+    if len(st.session_state.history) < 1: 
         st.warning("レポートを生成するには、最低1つ以上の記録が必要です。")
     else:
         with st.spinner("過去の記録を分析し、レポートを作成中..."):
@@ -403,6 +430,29 @@ if 'monthly_report' in st.session_state and st.session_state['monthly_report']:
     st.warning(report['goal'])
     
     st.markdown("---")
+# ----------------------------------------------------
+
+# ★★★ 履歴データのエクスポート機能 (Ver. 4.4 新規追加) ★★★
+st.markdown("#### 📥 記録のエクスポート（バックアップ）")
+
+if st.session_state.history:
+    csv_string = convert_history_to_csv(st.session_state.history)
+    
+    jst = pytz.timezone('Asia/Tokyo')
+    now_jst = datetime.datetime.now(jst).strftime("%Y%m%d_%H%M")
+    file_name = f"Reframe_PositiveDiary_{now_jst}.csv"
+    
+    st.download_button(
+        label="✅ 全履歴をCSVでダウンロード",
+        data=csv_string,
+        file_name=file_name,
+        mime="text/csv",
+        type="secondary"
+    )
+    st.caption("※ダウンロードしたファイルはExcelやGoogleスプレッドシートで開くことができます。")
+else:
+    st.info("まだ保存された履歴がないため、ダウンロードできません。")
+st.markdown("---")
 # ----------------------------------------------------
 
 # ----------------------------------------------------
