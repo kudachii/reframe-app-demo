@@ -17,6 +17,9 @@ def get_base64_image(image_path):
         return ""
     return ""
     
+# ★★★ テーマの定義を追加 ★★★
+THEMES = ["選択なし", "仕事・キャリア", "人間関係", "自己成長", "健康・メンタル"] 
+
 # ----------------------------------------------------
 # 履歴機能のためのセッションステートの初期化
 # ----------------------------------------------------
@@ -25,7 +28,7 @@ if 'history' not in st.session_state:
 # 一時的なレビュー用エントリをNoneで初期化
 if 'current_review_entry' not in st.session_state:
     st.session_state['current_review_entry'] = None
-# ★★★ 連続記録を保持するための初期化を追加 ★★★
+# 連続記録を保持するための初期化を追加
 if 'positive_streak' not in st.session_state:
     st.session_state['positive_streak'] = 0
 
@@ -40,14 +43,14 @@ try:
 except FileNotFoundError:
     st.warning("⚠️ 画像ファイルが見つかりません: unnamed.jpg。ファイル名とパスを確認してください。")
 
-# ★★★ 修正箇所：st.markdown を HTML/CSS に変更し、文字サイズを調整 ★★★
+# キャッチフレーズの文字サイズを調整 (Ver. 4.2 修正点)
 st.markdown(
-    "<p style='font-size: 1.2em; font-weight: bold;'>あなたの「心の重さ」を、成長と行動に変換する安全な場所。</p>",
+    "<p style='font-size: 1.1em; font-weight: bold;'>あなたの「心の重さ」を、成長と行動に変換する安全な場所。</p>",
     unsafe_allow_html=True
 )
 st.markdown("---")
 
-# ★★★ 連続記録の表示を追加 ★★★
+# 連続記録の表示
 st.markdown(
     f"##### 🏆 ポジティブ連続記録: <span style='color: green; font-size: 1.5em;'>{st.session_state.positive_streak}日</span> 連続中！", 
     unsafe_allow_html=True
@@ -71,7 +74,6 @@ except Exception as e:
 # 感情をポジティブに変換する関数 (コア機能) 
 # ----------------------------------------------------
 def reframe_negative_emotion(negative_text):
-    # ★★★ 多言語対応プロンプト ★★★
     system_prompt = """
     あなたは、ユーザーの精神的安全性を高めるための優秀なAIメンターです。
     ユーザーが入力したネガティブな感情や出来事に対し、**入力された言語と同じ言語で**、以下の厳格な3つの形式で分析し、ポジティブな再構築をしてください。
@@ -116,7 +118,7 @@ def reframe_negative_emotion(negative_text):
 
 
 # ----------------------------------------------------
-# 連続記録の計算ロジック (新規関数)
+# 連続記録の計算ロジック
 # ----------------------------------------------------
 def calculate_streak(history_list):
     """保存された履歴に基づき、現在の連続記録日数を計算する"""
@@ -124,37 +126,27 @@ def calculate_streak(history_list):
         return 0
 
     # 履歴から重複のない日付（YYYY/MM/DD形式）のリストを作成し、降順にソート
-    # 'date_only'キーが存在するもののみを対象とする
     unique_dates = sorted(list(set(entry['date_only'] for entry in history_list if 'date_only' in entry)), reverse=True)
     
     if not unique_dates:
         return 0
 
     streak = 0
-    
-    # 日本時間で今日の日付を取得
     jst = pytz.timezone('Asia/Tokyo')
     today = datetime.datetime.now(jst).date()
     
-    # 計算開始日を今日の日付（YYYY-MM-DD）とする
     current_date_to_check = today
     
-    # 連続記録の計算
     for date_str in unique_dates:
-        # date_only (YYYY/MM/DD) を datetime.date オブジェクトに変換
         try:
              entry_date = datetime.datetime.strptime(date_str, "%Y/%m/%d").date()
         except ValueError:
-             continue # フォーマットエラーをスキップ
+             continue
         
-        # ログの日付が計算中の日付（今日、昨日、一昨日...）と同じ場合
         if entry_date == current_date_to_check:
             streak += 1
-            # 次にチェックすべき日付を「昨日」に設定
             current_date_to_check -= datetime.timedelta(days=1)
-        # ログの日付が計算中の日付より古い場合（日付が飛んでいる場合）
         elif entry_date < current_date_to_check:
-            # 日付が飛んでいるため、連続記録は途切れる
             break
         
     return streak
@@ -195,7 +187,6 @@ def discard_entry():
 # 履歴の削除処理用の関数を定義
 def delete_entry(timestamp_to_delete):
     """指定されたタイムスタンプを持つエントリを履歴から削除する"""
-    # 削除対象以外のエントリを新しいリストとして保持する
     new_history = [
         entry for entry in st.session_state.history 
         if entry['timestamp'] != timestamp_to_delete
@@ -223,7 +214,8 @@ def on_convert_click(input_value):
         st.session_state.current_review_entry = {
             "timestamp": now_jst.strftime("%Y/%m/%d %H:%M"),
             "negative": input_value,
-            "positive_reframe": converted_result
+            "positive_reframe": converted_result,
+            "selected_theme": THEMES[0] # 初期値として「選択なし」を設定 (Ver. 4.2 修正点)
         }
         
         clear_input_only() 
@@ -279,6 +271,17 @@ if st.session_state.current_review_entry:
     
     st.markdown("---")
     
+    # ★★★ テーマ選択 UI (Ver. 4.2 新規追加) ★★★
+    selected_theme = st.selectbox(
+        "🏷️ この出来事を分類するテーマを選んでください。", 
+        options=THEMES, 
+        key="theme_selector_key"
+    )
+    # 選択されたテーマを current_review_entry に反映
+    st.session_state.current_review_entry['selected_theme'] = selected_theme
+    
+    st.markdown("---")
+    
     save_col, discard_col = st.columns([0.5, 0.5])
     
     with save_col:
@@ -306,19 +309,39 @@ if st.session_state.current_review_entry:
 # ----------------------------------------------------
 st.subheader("📚 過去のポジティブ変換日記（保存済み）")
 
-if st.session_state.history:
-    for i, entry in enumerate(st.session_state.history): 
+# ★★★ 履歴フィルタリング UI (Ver. 4.2 新規追加) ★★★
+filter_theme = st.selectbox(
+    "テーマで絞り込む", 
+    options=["すべてのテーマ"] + THEMES, 
+    index=0,
+    key="history_filter_key"
+)
+
+# フィルタリング処理
+if filter_theme == "すべてのテーマ":
+    filtered_history = st.session_state.history
+else:
+    # 選択なし("選択なし")もフィルタリング対象に含める
+    filtered_history = [
+        entry for entry in st.session_state.history 
+        if entry.get('selected_theme') == filter_theme
+    ]
+
+if filtered_history:
+    # for i, entry in enumerate(filtered_history): に変更
+    for i, entry in enumerate(filtered_history): 
         
         # 削除ボタンと履歴内容を横並びにするためのカラム設定
         col_ts, col_del = st.columns([0.8, 0.2])
         
         # タイムスタンプの表示
         with col_ts:
-            st.caption(f"🗓️ 変換日時: {entry['timestamp']}")
+            # ★★★ テーマの表示を追加 ★★★
+            theme_display = entry.get('selected_theme', 'テーマ不明')
+            st.caption(f"🗓️ 変換日時: {entry['timestamp']} | 🏷️ テーマ: **{theme_display}**")
         
         # 削除ボタンの設置
         with col_del:
-            # uniqueなキーを生成し、コールバック関数に削除対象のtimestampを渡す
             st.button(
                 "削除", 
                 key=f"delete_btn_{entry['timestamp']}", 
