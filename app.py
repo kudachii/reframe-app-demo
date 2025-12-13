@@ -42,7 +42,7 @@ except FileNotFoundError:
 
 # ★★★ 修正箇所：st.markdown を HTML/CSS に変更し、文字サイズを調整 ★★★
 st.markdown(
-    "<p style='font-size: 1.1em; font-weight: bold;'>あなたの「心の重さ」を、成長と行動に変換する安全な場所。</p>",
+    "<p style='font-size: 1.2em; font-weight: bold;'>あなたの「心の重さ」を、成長と行動に変換する安全な場所。</p>",
     unsafe_allow_html=True
 )
 st.markdown("---")
