@@ -267,12 +267,11 @@ except Exception as e:
 # ----------------------------------------------------
 # 感情をポジティブに変換する関数 (コア機能) 
 # ----------------------------------------------------
-# ★★★ 修正点: custom_input_value を引数として受け取るように変更 ★★★
 def reframe_negative_emotion(negative_text, custom_input_value):
     
     selected_key = st.session_state.get('selected_character_key', "優しさに溢れるメンター (Default)")
     
-    # ★★★ 修正点: custom_input_value を利用する ★★★
+    # 修正済み: custom_input_value を利用する
     if selected_key == "カスタムトーンを自分で定義する" and custom_input_value.strip():
         # 1. カスタムが選択され、かつ入力がある場合
         char_prompt_part = f"あなたは、ユーザーが指定した以下のトーンと役割になりきってください: **{custom_input_value.strip()}**"
@@ -466,7 +465,7 @@ def convert_history_to_csv(history_list):
 # ----------------------------------------------------
 
 # ----------------------------------------------------
-# リセット、保存、破棄処理用の関数を定義 (キーリセットを追加)
+# リセット、保存、破棄処理用の関数を定義 
 # ----------------------------------------------------
 
 def clear_input_only():
@@ -483,10 +482,12 @@ def clear_edit_keys():
 
 
 def reset_input():
+    """入力画面に戻り、レビュー中のデータを破棄する"""
     clear_input_only()
     st.session_state.current_review_entry = None
-    # ★★★ 追加: 編集キーをリセット ★★★
     clear_edit_keys() 
+    # カスタム入力エリアをリセットする（念のため）
+    st.session_state['custom_char_input_key'] = "" 
 
 
 def save_entry():
@@ -504,7 +505,6 @@ def save_entry():
         st.session_state.current_review_entry = None
         st.session_state['monthly_report'] = None 
         
-        # ★★★ 追加: 編集キーをリセット ★★★
         clear_edit_keys() 
         
         # ★★★ UIテキストを多言語化 ★★★
@@ -513,7 +513,6 @@ def save_entry():
 def discard_entry():
     st.session_state.current_review_entry = None
     
-    # ★★★ 追加: 編集キーをリセット ★★★
     clear_edit_keys() 
     
     # ★★★ UIテキストを多言語化 ★★★
@@ -536,7 +535,6 @@ def delete_entry(timestamp_to_delete):
 
 
 # 変換ボタンのコールバック関数
-# ★★★ 修正点: custom_input_value を引数として受け取るように変更 ★★★
 def on_convert_click(input_value, custom_input_value):
     if not input_value:
         # ★★★ UIテキストを多言語化 ★★★
@@ -547,7 +545,7 @@ def on_convert_click(input_value, custom_input_value):
     clear_edit_keys()
     
     with st.spinner("思考を整理し、ポジティブな側面を抽出中..."):
-        # ★★★ 修正点: custom_input_value を引数に追加 ★★★
+        # custom_input_value を引数に追加
         converted_result = reframe_negative_emotion(input_value, custom_input_value)
         
         jst = pytz.timezone('Asia/Tokyo')
@@ -581,13 +579,14 @@ with col1:
     st.button(
         get_text("CONVERT_BUTTON"), 
         on_click=on_convert_click, 
-        # ★★★ 修正点: custom_char_input_value を引数に追加 ★★★
+        # custom_char_input_value を引数に追加
         args=[negative_input, custom_char_input_value], 
         type="primary"
     )
 
 with col2:
-    st.button(get_text("RESET_BUTTON"), on_click=reset_input, key="reset_button") 
+    # トップの「もう一度書き直す」ボタン
+    st.button(get_text("RESET_BUTTON"), on_click=reset_input, key="reset_button_top") 
 
 # ----------------------------------------------------
 # 変換結果レビューエリア (UIの続き - 編集可能に変更)
@@ -597,7 +596,19 @@ if st.session_state.current_review_entry:
     
     review_entry = st.session_state.current_review_entry
     
-    st.subheader(get_text("REVIEW_HEADER"))
+    # ★★★ 修正点: レビューヘッダーにリセットボタンを配置するためのカラムを作成 ★★★
+    review_header_col1, review_header_col2 = st.columns([0.8, 0.2])
+    
+    with review_header_col1:
+        st.subheader(get_text("REVIEW_HEADER"))
+    
+    # ★★★ 修正点: レビュー中にもリセットボタンを表示（改善2の適用） ★★★
+    with review_header_col2:
+        st.button(
+            get_text("RESET_BUTTON"), 
+            on_click=reset_input, 
+            key="reset_button_review" # キーを分ける
+        )
     
     st.caption(f"{get_text('CONVERT_DATE')} {review_entry['timestamp']}")
     st.code(f"{get_text('ORIGINAL_EVENT')} {review_entry['negative']}", language='text') 
@@ -635,7 +646,7 @@ if st.session_state.current_review_entry:
         label_visibility="collapsed"
     )
 
-    # ★★★ 変更点: ユーザーが編集した内容をセッションステートに常に反映させる ★★★
+    # ユーザーが編集した内容をセッションステートに常に反映させる
     st.session_state.current_review_entry['positive_reframe']['fact'] = edited_fact
     st.session_state.current_review_entry['positive_reframe']['positive'] = edited_positive
     st.session_state.current_review_entry['positive_reframe']['action'] = edited_action
