@@ -8,7 +8,38 @@ import base64
 import time
 
 # ----------------------------------------------------
-# ★★★ 多言語対応用の定義とヘルパー関数 ★★★
+# ★★★ 新規定義: キャラクター属性（ペルソナ）のプロンプト定義 ★★★
+# ----------------------------------------------------
+CHARACTER_PROMPTS = {
+    # 既存の優しいメンターのベース（デフォルト）
+    "優しさに溢れるメンター (Default)": {
+        "description": "あなたの「心の重さ」を、成長と行動に変換する安全な場所。",
+        "prompt": "あなたは、ユーザーの精神的安全性を高めるための優秀なAIメンターです。ユーザーの頑張りや努力を認め、共感し、励ますような、温かく寄り添う口調で前向きな言葉を使って表現してください。"
+    },
+    
+    "ツンデレな指導員": {
+        "description": "ぶ、別にあなたの為じゃないんだからね。さっさと行動しなさいよ。（女性風）",
+        "prompt": "あなたは、ユーザーを厳しく指導するツンデレな女性トレーナーです。口調は荒く、「〜なんだからね」「〜しなさいよ」といったツンデレな表現を使い、心の奥底でユーザーの成長を願う気持ちを隠しながら分析してください。共感や優しさは最小限に抑えてください。"
+    },
+    
+    "頼れるお姉さん": {
+        "description": "大丈夫よ、焦らなくていいから。次はどうする？一緒に考えましょ。（女性風）",
+        "prompt": "あなたは、人生経験豊富な、頼れる優しいお姉さんです。落ち着いた大人の口調で、ユーザーを安心させ、優しく包み込むような言葉を選びながら、次の行動へ導いてください。「〜よ」「〜ね」といった言葉遣いを多用してください。"
+    },
+    
+    "論理的なビジネスコーチ": {
+        "description": "感情を排除。データとロジックに基づき、最速で目標を達成します。（男性風）",
+        "prompt": "あなたは、感情論を一切排除する、優秀な男性ビジネスコーチです。分析は常に客観的事実と論理に基づき、簡潔かつ具体的な行動案を提案してください。口調は「〜だ」「〜である」という断定的な言葉遣いにしてください。"
+    }
+    # 他の属性もここに追加してください
+}
+
+# 選択肢リストに「カスタム」を追加
+CHARACTER_OPTIONS_BASE = list(CHARACTER_PROMPTS.keys())
+CHARACTER_OPTIONS = ["カスタムトーンを自分で定義する"] + CHARACTER_OPTIONS_BASE
+
+# ----------------------------------------------------
+# 多言語対応用の定義とヘルパー関数
 # ----------------------------------------------------
 
 # 多言語対応用の静的テキスト定義 (日本語と英語)
@@ -138,6 +169,9 @@ if 'monthly_report' not in st.session_state:
     st.session_state['monthly_report'] = None 
 if 'language' not in st.session_state:
     st.session_state['language'] = 'JA' # 初期言語は日本語
+if 'selected_character_key' not in st.session_state:
+    st.session_state['selected_character_key'] = "優しさに溢れるメンター (Default)"
+
 
 # ----------------------------------------------------
 # 画面デザインとタイトル設定
@@ -154,6 +188,39 @@ st.session_state['language'] = st.selectbox(
     index=list(LANGUAGES.keys()).index(st.session_state['language'])
 )
 st.markdown("---")
+
+
+# ----------------------------------------------------
+# ★★★ 変更・追加: キャラクター選択 UI と カスタム入力の追加 ★★★
+# ----------------------------------------------------
+
+# 選択ボックス
+st.session_state['selected_character_key'] = st.selectbox(
+    "🎭 あなたのメンター属性を選択", 
+    options=CHARACTER_OPTIONS, 
+    key='character_selector_key',
+    index=CHARACTER_OPTIONS.index(st.session_state['selected_character_key'])
+)
+
+# カスタムプロンプト入力エリア
+custom_char_input = None
+if st.session_state['selected_character_key'] == "カスタムトーンを自分で定義する":
+    # カスタムを選択した場合のみ、入力エリアを表示
+    custom_char_input = st.text_input(
+        "✨ メンターの口調や役割を具体的に入力してください",
+        placeholder="例: 関西弁で話す、情熱的なスポーツコーチになってください。",
+        key='custom_char_input_key'
+    )
+    st.caption("※入力がない場合、またはカスタム入力が空の場合は、デフォルトの優しいメンターの口調で実行されます。")
+else:
+    # 固定のキャラクター選択時、その説明文を表示
+    selected_char_key = st.session_state['selected_character_key']
+    char_desc = CHARACTER_PROMPTS.get(selected_char_key, CHARACTER_PROMPTS["優しさに溢れるメンター (Default)"])["description"]
+    st.caption(f"**このメンターのコンセプト:** {char_desc}") 
+
+st.markdown("---") 
+
+# ----------------------------------------------------
 
 # カスタム画像表示
 try:
@@ -193,14 +260,33 @@ except Exception as e:
 # 感情をポジティブに変換する関数 (コア機能) 
 # ----------------------------------------------------
 def reframe_negative_emotion(negative_text):
-    # ★★★ プロンプトは「入力言語と同じ言語で出力を返す」指示を保持 (多言語対応済) ★★★
-    system_prompt = """
-    あなたは、ユーザーの精神的安全性を高めるための優秀なAIメンターです。
+    
+    selected_key = st.session_state.get('selected_character_key', "優しさに溢れるメンター (Default)")
+    custom_input = st.session_state.get('custom_char_input_key', '')
+    
+    # ★★★ 変更点：プロンプトの決定ロジック ★★★
+    if selected_key == "カスタムトーンを自分で定義する" and custom_input.strip():
+        # 1. カスタムが選択され、かつ入力がある場合
+        char_prompt_part = f"あなたは、ユーザーが指定した以下のトーンと役割になりきってください: **{custom_input.strip()}**"
+        
+    elif selected_key in CHARACTER_PROMPTS:
+        # 2. 固定の選択肢が選ばれている場合
+        char_prompt_part = CHARACTER_PROMPTS[selected_key]["prompt"]
+        
+    else:
+        # 3. それ以外（選択なし、またはカスタム入力が空）の場合はデフォルト
+        char_prompt_part = CHARACTER_PROMPTS["優しさに溢れるメンター (Default)"]["prompt"]
+    
+    
+    # 厳格な出力形式の指示と、キャラクターのプロンプトを結合
+    system_prompt = f"""
+    {char_prompt_part}
+    
     ユーザーが入力したネガティブな感情や出来事に対し、**入力された言語と同じ言語で**、以下の厳格な3つの形式で分析し、ポジティブな再構築をしてください。
 
     【出力形式】
     1. 事実の客観視: (事実のみを簡潔に要約)
-    2. ポジティブな側面抽出: (この出来事からあなたが優しさや強さを得た点、成長できた点を抽出します。ユーザーの頑張りや努力を認め、共感し、励ますような、温かく寄り添う口調で前向きな言葉を使って表現してください。)
+    2. ポジティブな側面抽出: (この出来事からあなたが優しさや強さを得た点、成長できた点を抽出します。前述のキャラクターの口調で表現してください。)
     3. 今後の具体的な行動案（Next Step）: (小さく、すぐ実行できる次のアクションを一つ提案)
     
     必ずこの3つの要素を「1.」「2.」「3.」で始まる形式で出力し、それ以外の説明や挨拶は一切含めないでください。
@@ -234,6 +320,7 @@ def reframe_negative_emotion(negative_text):
 
     except Exception as e:
         return {"fact": "APIエラー", "positive": get_text("API_ERROR_GEMINI") + f"{e}", "action": "ー"}
+# ----------------------------------------------------
 
 # ----------------------------------------------------
 # 連続記録の計算ロジック (変更なし)
@@ -266,9 +353,11 @@ def calculate_streak(history_list):
             break
         
     return streak
+# ----------------------------------------------------
+
 
 # ----------------------------------------------------
-# 月間レポートを生成する関数 (変更なし)
+# 月間レポートを生成する関数 (中略 - 変更なし)
 # ----------------------------------------------------
 def generate_monthly_report(history_list):
     # ... (レポート生成のロジックは変更なし) ...
@@ -339,8 +428,9 @@ def generate_monthly_report(history_list):
         return get_text("REPORT_API_ERROR"), get_text("API_ERROR_GEMINI") + f"{e}", "ー"
 # ----------------------------------------------------
 
+
 # ----------------------------------------------------
-# 履歴をCSV形式に変換する関数
+# 履歴をCSV形式に変換する関数 (変更なし)
 # ----------------------------------------------------
 def convert_history_to_csv(history_list):
     """セッション履歴をCSV形式の文字列に変換する"""
@@ -368,14 +458,28 @@ def convert_history_to_csv(history_list):
 # ----------------------------------------------------
 
 # ----------------------------------------------------
-# リセット、保存、破棄処理用の関数を定義
+# リセット、保存、破棄処理用の関数を定義 (キーリセットを追加)
 # ----------------------------------------------------
+
 def clear_input_only():
     st.session_state["negative_input_key"] = ""
+
+def clear_edit_keys():
+    """編集エリアのキーをリセットするヘルパー関数"""
+    if "edit_fact_key" in st.session_state:
+        del st.session_state["edit_fact_key"]
+    if "edit_positive_key" in st.session_state:
+        del st.session_state["edit_positive_key"]
+    if "edit_action_key" in st.session_state:
+        del st.session_state["edit_action_key"]
+
 
 def reset_input():
     clear_input_only()
     st.session_state.current_review_entry = None
+    # ★★★ 追加: 編集キーをリセット ★★★
+    clear_edit_keys() 
+
 
 def save_entry():
     if st.session_state.current_review_entry:
@@ -391,11 +495,19 @@ def save_entry():
         
         st.session_state.current_review_entry = None
         st.session_state['monthly_report'] = None 
+        
+        # ★★★ 追加: 編集キーをリセット ★★★
+        clear_edit_keys() 
+        
         # ★★★ UIテキストを多言語化 ★★★
         st.toast(get_text("SAVE_TOAST"), icon='💾')
 
 def discard_entry():
     st.session_state.current_review_entry = None
+    
+    # ★★★ 追加: 編集キーをリセット ★★★
+    clear_edit_keys() 
+    
     # ★★★ UIテキストを多言語化 ★★★
     st.toast(get_text("DISCARD_TOAST"), icon='✍️')
 
@@ -414,6 +526,7 @@ def delete_entry(timestamp_to_delete):
     st.toast(get_text("DELETE_TOAST"), icon='🚮')
 # ----------------------------------------------------
 
+
 # 変換ボタンのコールバック関数
 def on_convert_click(input_value):
     if not input_value:
@@ -421,6 +534,9 @@ def on_convert_click(input_value):
         st.warning(get_text("INPUT_WARNING"))
         return
 
+    # 変換前に編集キーをリセットし、新しい結果を受け入れる準備をする
+    clear_edit_keys()
+    
     with st.spinner("思考を整理し、ポジティブな側面を抽出中..."):
         converted_result = reframe_negative_emotion(input_value)
         
@@ -442,7 +558,7 @@ def on_convert_click(input_value):
 st.markdown(f"#### {get_text('INPUT_HEADER')}")
 
 negative_input = st.text_area(
-    get_text("INPUT_PLACEHOLDER"), # ラベルとして利用 (スペース節約のため通常は空だが、今回はプレースホルダーをラベルとして使用)
+    get_text("INPUT_PLACEHOLDER"), # ラベルとして利用 
     height=200,
     placeholder=get_text("INPUT_PLACEHOLDER"),
     key="negative_input_key",
@@ -463,7 +579,7 @@ with col2:
     st.button(get_text("RESET_BUTTON"), on_click=reset_input, key="reset_button") 
 
 # ----------------------------------------------------
-# 変換結果レビューエリア (UIの続き)
+# 変換結果レビューエリア (UIの続き - 編集可能に変更)
 # ----------------------------------------------------
 st.markdown("---")
 if st.session_state.current_review_entry:
@@ -477,14 +593,41 @@ if st.session_state.current_review_entry:
     
     st.markdown(f"#### **{get_text('CONVERSION_RESULT')}**")
     
+    # 🧊 1. 事実の客観視 (st.info から st.text_area へ変更)
     st.markdown(f"##### {get_text('FACT_HEADER')}")
-    st.info(review_entry['positive_reframe']['fact'])
-    
+    edited_fact = st.text_area(
+        "事実の客観視（編集可）",
+        # 初回はセッションから値を取得し、以降はtext_areaのkeyでセッションに保持
+        value=review_entry['positive_reframe']['fact'],
+        height=100,
+        key="edit_fact_key",
+        label_visibility="collapsed"
+    )
+
+    # 🌱 2. ポジティブな側面抽出 (st.success から st.text_area へ変更)
     st.markdown(f"##### {get_text('POSITIVE_HEADER')}")
-    st.success(review_entry['positive_reframe']['positive'])
-    
+    edited_positive = st.text_area(
+        "ポジティブな側面抽出（編集可）",
+        value=review_entry['positive_reframe']['positive'],
+        height=150,
+        key="edit_positive_key",
+        label_visibility="collapsed"
+    )
+
+    # 👣 3. 今後の具体的な行動案 (st.warning から st.text_area へ変更)
     st.markdown(f"##### {get_text('ACTION_HEADER')}")
-    st.warning(review_entry['positive_reframe']['action']) 
+    edited_action = st.text_area(
+        "今後の具体的な行動案（編集可）",
+        value=review_entry['positive_reframe']['action'],
+        height=100,
+        key="edit_action_key",
+        label_visibility="collapsed"
+    )
+
+    # ★★★ 変更点: ユーザーが編集した内容をセッションステートに常に反映させる ★★★
+    st.session_state.current_review_entry['positive_reframe']['fact'] = edited_fact
+    st.session_state.current_review_entry['positive_reframe']['positive'] = edited_positive
+    st.session_state.current_review_entry['positive_reframe']['action'] = edited_action
     
     st.markdown("---")
     
@@ -639,5 +782,4 @@ if filtered_history:
         st.caption(get_text("HISTORY_COPY_HINT"))
         st.markdown("---")
 
-else:
-    st.write(get_text("NO_HISTORY"))
+else: st.write(get_text("NO_HISTORY"))
