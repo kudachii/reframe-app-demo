@@ -324,11 +324,8 @@ def clear_edit_keys():
 
 
 def reset_custom_tone_input():
-    """★★ エラー対策済み ★★ カスタムトーン関連のセッションステートをクリアする"""
-    # Streamlitウィジェットの値をクリアする安全な方法 (st.rerun()前に実行)
-    if 'custom_char_input_key' in st.session_state:
-        st.session_state['custom_char_input_key'] = "" 
-        
+    """★★ 修正済み ★★ カスタムトーンの見本と確定フラグをクリアする"""
+    # エラー回避のため、ここでは 'custom_char_input_key' の直接代入は行わない
     st.session_state['custom_sample_output'] = None
     st.session_state['custom_tone_is_set'] = False
 
@@ -341,6 +338,9 @@ def reset_input():
     # カスタムトーンの見本とフラグをクリア
     st.session_state['custom_sample_output'] = None
     st.session_state['custom_tone_is_set'] = False 
+    # ★★ 修正箇所: メインのリセット時にもカスタム入力エリアの値をクリア ★★
+    if 'custom_char_input_key' in st.session_state:
+        st.session_state['custom_char_input_key'] = "" 
 
 
 def save_entry():
@@ -482,8 +482,9 @@ if is_custom_mode:
                 
         with col_reset:
             if st.button("↩️ トーンをやり直す", key='reset_custom_tone_btn'):
-                # ★★ 修正済みの安全なリセット関数を呼び出す ★★
+                # ★★ 修正箇所: 安全なリセットを実行し、Rerun で値をクリア ★★
                 reset_custom_tone_input()
+                st.session_state['custom_char_input_key'] = "" 
                 st.rerun()
                 
         st.session_state['custom_tone_is_set'] = False 
@@ -526,7 +527,6 @@ st.markdown("---")
 # 連続記録、レポート、CSV関連のヘルパー関数 (省略 - 変更なし)
 # ----------------------------------------------------
 def calculate_streak(history_list):
-    # (省略 - 変更なし)
     if not history_list: return 0
     unique_dates = sorted(list(set(entry['date_only'] for entry in history_list if 'date_only' in entry)), reverse=True)
     if not unique_dates: return 0
@@ -544,7 +544,7 @@ def calculate_streak(history_list):
     return streak
 
 def generate_monthly_report(history_list):
-    # (省略 - 変更なし)
+    if client is None: return "APIエラー", get_text("REPORT_API_ERROR"), "ー"
     jst = pytz.timezone('Asia/Tokyo')
     today = datetime.datetime.now(jst)
     start_date = today - datetime.timedelta(days=30)
@@ -575,7 +575,6 @@ def generate_monthly_report(history_list):
     except Exception as e: return get_text("REPORT_API_ERROR"), get_text("API_ERROR_GEMINI") + f"{e}", "ー"
 
 def convert_history_to_csv(history_list):
-    # (省略 - 変更なし)
     if not history_list: return ""
     header = get_text("CSV_HEADER")
     csv_data = header
@@ -761,7 +760,7 @@ if filtered_history:
             st.caption(f"{get_text('CONVERT_DATE')} {entry['timestamp']} | 🏷️ {get_text('THEME_SELECT_LABEL').split(' ')[0]}: **{theme_display}**")
         
         with col_del:
-            st.button(get_text("DELETE_BUTTON"), key=f"delete_btn_{entry['timestamp']}", on_click=delete_entry, args=[entry['timestamp']])
+            st.button(get_text("DELETE_BUTTON"), key=f"delete_btn_{entry['timestamp']}", on_on_click=delete_entry, args=[entry['timestamp']])
         
         history_value = (
             f"🧊 1. {get_text('FACT_HEADER').split(' ')[-1]}: {entry['positive_reframe']['fact']}\n\n"
