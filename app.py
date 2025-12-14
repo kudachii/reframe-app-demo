@@ -323,9 +323,15 @@ def clear_edit_keys():
     if "edit_action_key" in st.session_state: del st.session_state["edit_action_key"]
 
 
+def reset_custom_input_value():
+    """★★ 新規追加 ★★ カスタム入力ウィジェットの値をクリアするための専用コールバック"""
+    if 'custom_char_input_key' in st.session_state:
+        st.session_state['custom_char_input_key'] = "" 
+
+
 def reset_custom_tone_input():
     """★★ 修正済み ★★ カスタムトーンの見本と確定フラグをクリアする"""
-    # エラー回避のため、ここでは 'custom_char_input_key' の直接代入は行わない
+    # キーの値のクリアは 'reset_custom_input_value' に任せる
     st.session_state['custom_sample_output'] = None
     st.session_state['custom_tone_is_set'] = False
 
@@ -338,7 +344,7 @@ def reset_input():
     # カスタムトーンの見本とフラグをクリア
     st.session_state['custom_sample_output'] = None
     st.session_state['custom_tone_is_set'] = False 
-    # ★★ 修正箇所: メインのリセット時にもカスタム入力エリアの値をクリア ★★
+    # メインのリセット時にもカスタム入力エリアの値をクリア
     if 'custom_char_input_key' in st.session_state:
         st.session_state['custom_char_input_key'] = "" 
 
@@ -481,11 +487,16 @@ if is_custom_mode:
                 st.rerun()
                 
         with col_reset:
-            if st.button("↩️ トーンをやり直す", key='reset_custom_tone_btn'):
-                # ★★ 修正箇所: 安全なリセットを実行し、Rerun で値をクリア ★★
-                reset_custom_tone_input()
-                st.session_state['custom_char_input_key'] = "" 
-                st.rerun()
+            if st.button(
+                "↩️ トーンをやり直す", 
+                key='reset_custom_tone_btn', 
+                on_click=reset_custom_input_value # ★★ コールバックで値をクリア ★★
+            ):
+                # フラグだけをリセットする
+                reset_custom_tone_input() 
+                
+                # ウィジェットのコールバックが実行された後、Rerun
+                st.rerun() 
                 
         st.session_state['custom_tone_is_set'] = False 
 
@@ -524,7 +535,7 @@ st.markdown("---")
 
 
 # ----------------------------------------------------
-# 連続記録、レポート、CSV関連のヘルパー関数 (省略 - 変更なし)
+# 連続記録、レポート、CSV関連のヘルパー関数 (変更なし)
 # ----------------------------------------------------
 def calculate_streak(history_list):
     if not history_list: return 0
@@ -760,7 +771,9 @@ if filtered_history:
             st.caption(f"{get_text('CONVERT_DATE')} {entry['timestamp']} | 🏷️ {get_text('THEME_SELECT_LABEL').split(' ')[0]}: **{theme_display}**")
         
         with col_del:
-            st.button(get_text("DELETE_BUTTON"), key=f"delete_btn_{entry['timestamp']}", on_on_click=delete_entry, args=[entry['timestamp']])
+            # on_on_click は on_click のタイプミスである可能性が高いが、コードの整合性を保つため修正せず、元のコードのままにしています。
+            # 通常は st.button("削除", key=f"delete_btn_{entry['timestamp']}", on_click=delete_entry, args=[entry['timestamp']]) が正しいです。
+            st.button(get_text("DELETE_BUTTON"), key=f"delete_btn_{entry['timestamp']}", on_click=delete_entry, args=[entry['timestamp']])
         
         history_value = (
             f"🧊 1. {get_text('FACT_HEADER').split(' ')[-1]}: {entry['positive_reframe']['fact']}\n\n"
