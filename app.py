@@ -146,7 +146,7 @@ TRANSLATIONS = {
         "EXPORT_CAPTION": "※The downloaded file can be opened with Excel or Google Sheets.",
         "NO_EXPORT_DATA": "Cannot download as there is no saved history yet.",
         "THEMES": ["None Selected", "Work/Career", "Relationships", "Self-Growth", "Health/Mental"],
-        "IMAGE_WARNING": "⚠️ Image file not found: unnamed.jpg。ファイル名とパスを確認してください。"
+        "IMAGE_WARNING": "⚠️ 画像ファイルが見つかりません: unnamed.jpg。ファイル名とパスを確認してください。"
     }
 }
 
@@ -205,17 +205,21 @@ st.session_state['selected_character_key'] = st.selectbox(
 )
 
 # カスタムプロンプト入力エリア
-custom_char_input = None
+custom_char_input_value = "" # カスタム入力の値を保持する変数
+
 if st.session_state['selected_character_key'] == "カスタムトーンを自分で定義する":
     # カスタムを選択した場合のみ、入力エリアを表示
     
-    # ★★★ 修正済み: key='custom_char_input_key' を使用し、st.session_stateに値を自動で保持させる ★★★
-    custom_char_input = st.text_input(
+    st.text_input(
         "✨ メンターの口調や役割を具体的に入力してください",
         placeholder="例: 関西弁で話す、情熱的なスポーツコーチになってください。",
         key='custom_char_input_key' 
     )
     st.caption("※入力がない場合、またはカスタム入力が空の場合は、デフォルトの優しいメンターの口調で実行されます。")
+    
+    # 修正点: ここでセッションステートから実際の入力値を取得しておく
+    custom_char_input_value = st.session_state.get('custom_char_input_key', '')
+    
 else:
     # 固定のキャラクター選択時、その説明文を表示
     selected_char_key = st.session_state['selected_character_key']
@@ -263,15 +267,15 @@ except Exception as e:
 # ----------------------------------------------------
 # 感情をポジティブに変換する関数 (コア機能) 
 # ----------------------------------------------------
-def reframe_negative_emotion(negative_text):
+# ★★★ 修正点: custom_input_value を引数として受け取るように変更 ★★★
+def reframe_negative_emotion(negative_text, custom_input_value):
     
     selected_key = st.session_state.get('selected_character_key', "優しさに溢れるメンター (Default)")
-    custom_input = st.session_state.get('custom_char_input_key', '')
     
-    # ★★★ 変更点：プロンプトの決定ロジック ★★★
-    if selected_key == "カスタムトーンを自分で定義する" and custom_input.strip():
+    # ★★★ 修正点: custom_input_value を利用する ★★★
+    if selected_key == "カスタムトーンを自分で定義する" and custom_input_value.strip():
         # 1. カスタムが選択され、かつ入力がある場合
-        char_prompt_part = f"あなたは、ユーザーが指定した以下のトーンと役割になりきってください: **{custom_input.strip()}**"
+        char_prompt_part = f"あなたは、ユーザーが指定した以下のトーンと役割になりきってください: **{custom_input_value.strip()}**"
         
     elif selected_key in CHARACTER_PROMPTS:
         # 2. 固定の選択肢が選ばれている場合
@@ -532,7 +536,8 @@ def delete_entry(timestamp_to_delete):
 
 
 # 変換ボタンのコールバック関数
-def on_convert_click(input_value):
+# ★★★ 修正点: custom_input_value を引数として受け取るように変更 ★★★
+def on_convert_click(input_value, custom_input_value):
     if not input_value:
         # ★★★ UIテキストを多言語化 ★★★
         st.warning(get_text("INPUT_WARNING"))
@@ -542,7 +547,8 @@ def on_convert_click(input_value):
     clear_edit_keys()
     
     with st.spinner("思考を整理し、ポジティブな側面を抽出中..."):
-        converted_result = reframe_negative_emotion(input_value)
+        # ★★★ 修正点: custom_input_value を引数に追加 ★★★
+        converted_result = reframe_negative_emotion(input_value, custom_input_value)
         
         jst = pytz.timezone('Asia/Tokyo')
         now_jst = datetime.datetime.now(jst)
@@ -575,7 +581,8 @@ with col1:
     st.button(
         get_text("CONVERT_BUTTON"), 
         on_click=on_convert_click, 
-        args=[negative_input], 
+        # ★★★ 修正点: custom_char_input_value を引数に追加 ★★★
+        args=[negative_input, custom_char_input_value], 
         type="primary"
     )
 
