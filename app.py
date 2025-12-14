@@ -146,7 +146,7 @@ TRANSLATIONS = {
         "EXPORT_CAPTION": "※The downloaded file can be opened with Excel or Google Sheets.",
         "NO_EXPORT_DATA": "Cannot download as there is no saved history yet.",
         "THEMES": ["None Selected", "Work/Career", "Relationships", "Self-Growth", "Health/Mental"],
-        "IMAGE_WARNING": "⚠️ Image file not found: unnamed.jpg. Check the filename and path."
+        "IMAGE_WARNING": "⚠️ Image file not found: unnamed.jpg。ファイル名とパスを確認してください。"
     }
 }
 
@@ -171,6 +171,8 @@ if 'language' not in st.session_state:
     st.session_state['language'] = 'JA' # 初期言語は日本語
 if 'selected_character_key' not in st.session_state:
     st.session_state['selected_character_key'] = "優しさに溢れるメンター (Default)"
+if 'custom_char_input_key' not in st.session_state:
+    st.session_state['custom_char_input_key'] = ""
 
 
 # ----------------------------------------------------
@@ -206,10 +208,12 @@ st.session_state['selected_character_key'] = st.selectbox(
 custom_char_input = None
 if st.session_state['selected_character_key'] == "カスタムトーンを自分で定義する":
     # カスタムを選択した場合のみ、入力エリアを表示
+    
+    # ★★★ 修正済み: key='custom_char_input_key' を使用し、st.session_stateに値を自動で保持させる ★★★
     custom_char_input = st.text_input(
         "✨ メンターの口調や役割を具体的に入力してください",
         placeholder="例: 関西弁で話す、情熱的なスポーツコーチになってください。",
-        key='custom_char_input_key'
+        key='custom_char_input_key' 
     )
     st.caption("※入力がない場合、またはカスタム入力が空の場合は、デフォルトの優しいメンターの口調で実行されます。")
 else:
