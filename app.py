@@ -140,12 +140,12 @@ TRANSLATIONS = {
         "API_ERROR_INIT": "API client initialization failed. GEMINI_API_KEY is missing in secrets.",
         "API_ERROR_GENERIC": "API client initialization failed. Error: ",
         "API_ERROR_GEMINI": "Gemini API execution error occurred: ",
-        "CSV_HEADER": "Timestamp,Date,Theme,Original_Negative_Event,1.Objective_Fact,2.Positive_Aspect,3.Action_Plan\n",
-        "EXPORT_HEADER": "📥 Export Records (Backup)",
-        "DOWNLOAD_BUTTON": "✅ Download All History as CSV",
-        "EXPORT_CAPTION": "※The downloaded file can be opened with Excel or Google Sheets.",
-        "NO_EXPORT_DATA": "Cannot download as there is no saved history yet.",
-        "THEMES": ["None Selected", "Work/Career", "Relationships", "Self-Growth", "Health/Mental"],
+        "CSV_HEADER": "タイムスタンプ,日付,テーマ,元のネガティブな出来事,1.客観視(事実),2.ポジティブな側面,3.具体的な行動案\n",
+        "EXPORT_HEADER": "📥 記録のエクスポート（バックアップ）",
+        "DOWNLOAD_BUTTON": "✅ 全履歴をCSVでダウンロード",
+        "EXPORT_CAPTION": "※ダウンロードしたファイルはExcelやGoogleスプレッドシートで開くことができます。",
+        "NO_EXPORT_DATA": "まだ保存された履歴がないため、ダウンロードできません。",
+        "THEMES": ["選択なし", "仕事・キャリア", "人間関係", "自己成長", "健康・メンタル"],
         "IMAGE_WARNING": "⚠️ 画像ファイルが見つかりません: unnamed.jpg。ファイル名とパスを確認してください。"
     }
 }
@@ -173,6 +173,16 @@ if 'selected_character_key' not in st.session_state:
     st.session_state['selected_character_key'] = "優しさに溢れるメンター (Default)"
 if 'custom_char_input_key' not in st.session_state:
     st.session_state['custom_char_input_key'] = ""
+    
+# ★★★ 追加: カスタムトーンの見本保持用ステートと確定フラグ ★★★
+if 'custom_sample_output' not in st.session_state:
+    st.session_state['custom_sample_output'] = None
+if 'custom_tone_is_set' not in st.session_state:
+    st.session_state['custom_tone_is_set'] = False
+
+# 見本生成に使うダミーのネガティブ入力文
+DUMMY_NEGATIVE_INPUT_JA = "上司に叱責されて、気分が沈んでいる。"
+DUMMY_NEGATIVE_INPUT_EN = "I received a strong reprimand from my boss and I feel down." 
 
 
 # ----------------------------------------------------
@@ -193,7 +203,7 @@ st.markdown("---")
 
 
 # ----------------------------------------------------
-# ★★★ 変更・追加: キャラクター選択 UI と カスタム入力の追加 ★★★
+# ★★★ キャラクター選択 UI と カスタム入力のロジック (大幅変更) ★★★
 # ----------------------------------------------------
 
 # 選択ボックス
@@ -206,9 +216,10 @@ st.session_state['selected_character_key'] = st.selectbox(
 
 # カスタムプロンプト入力エリア
 custom_char_input_value = "" # カスタム入力の値を保持する変数
+is_custom_mode = st.session_state['selected_character_key'] == "カスタムトーンを自分で定義する"
 
-if st.session_state['selected_character_key'] == "カスタムトーンを自分で定義する":
-    # カスタムを選択した場合のみ、入力エリアを表示
+if is_custom_mode:
+    # --- カスタムモード時のみ表示 ---
     
     st.text_input(
         "✨ メンターの口調や役割を具体的に入力してください",
@@ -216,12 +227,79 @@ if st.session_state['selected_character_key'] == "カスタムトーンを自分
         key='custom_char_input_key' 
     )
     st.caption("※入力がない場合、またはカスタム入力が空の場合は、デフォルトの優しいメンターの口調で実行されます。")
-    
-    # 修正点: ここでセッションステートから実際の入力値を取得しておく
     custom_char_input_value = st.session_state.get('custom_char_input_key', '')
     
-else:
-    # 固定のキャラクター選択時、その説明文を表示
+    # ----------------------------------------------------
+    # ★★★ 新しいフロー: 見本生成と採用/やり直しボタン ★★★
+    # ----------------------------------------------------
+    
+    # 現在のカスタム入力が、見本生成時の入力と異なるとき、または見本がないとき
+    is_input_changed = (
+        st.session_state['custom_sample_output'] is None or
+        st.session_state['custom_sample_output'].get('input_hash') != hash(custom_char_input_value)
+    )
+
+    # 1. 見本生成ボタン
+    if is_input_changed and not st.session_state.get('custom_tone_is_set'):
+        if st.button("💬 このトーンの見本を生成する", key='generate_sample_btn', type="secondary"):
+            if custom_char_input_value.strip():
+                # APIを呼び出して見本を生成
+                sample_input = DUMMY_NEGATIVE_INPUT_JA if st.session_state['language'] == 'JA' else DUMMY_NEGATIVE_INPUT_EN
+                with st.spinner("見本を生成中..."):
+                    sample_result = reframe_negative_emotion(sample_input, custom_char_input_value)
+                
+                # 結果をセッションステートに保存
+                st.session_state['custom_sample_output'] = {
+                    "result": sample_result,
+                    "input_hash": hash(custom_char_input_value) # ハッシュで変更を検知
+                }
+                st.rerun()
+            else:
+                st.warning("⚠️ 見本を生成するには、口調を入力してください。")
+
+    # 2. 見本が表示されている状態（カスタム入力が変更されていない）
+    if st.session_state['custom_sample_output'] and \
+       st.session_state['custom_sample_output'].get('input_hash') == hash(custom_char_input_value):
+        
+        sample_result = st.session_state['custom_sample_output']['result']
+
+        st.markdown("---")
+        st.subheader("✅ カスタムトーンの適用イメージ")
+        
+        # 見本の表示
+        st.info(
+            f"**1. 事実:** {sample_result['fact']}\n\n"
+            f"**2. ポジティブ:** {sample_result['positive']}\n\n"
+            f"**3. 行動:** {sample_result['action']}"
+        )
+        st.caption(f"（仮の入力: {DUMMY_NEGATIVE_INPUT_JA if st.session_state['language'] == 'JA' else DUMMY_NEGATIVE_INPUT_EN}）")
+        
+        col_use, col_reset = st.columns([0.5, 0.5])
+        
+        with col_use:
+            # トーン確定ボタン: フラグを立てて、メインのネガティブ入力エリアを表示させる
+            if st.button("✨ このトーンを使用する (確定)", key='use_custom_tone_btn', type="primary"):
+                st.session_state['custom_tone_is_set'] = True
+                st.session_state['custom_sample_output'] = None # 見本は不要になるのでクリア
+                st.rerun()
+                
+        with col_reset:
+            # やり直しボタン: 見本とフラグをリセットし、トーン入力に戻る
+            if st.button("↩️ トーンをやり直す", key='reset_custom_tone_btn'):
+                st.session_state['custom_sample_output'] = None
+                st.session_state['custom_tone_is_set'] = False
+                st.session_state['custom_char_input_key'] = "" # 入力テキストエリアもクリアする
+                st.rerun()
+                
+        # 見本生成・確定フローの途中であるため、メインのネガティブ入力エリアを非表示にする
+        st.session_state['custom_tone_is_set'] = False 
+
+    # トーン確定後、または固定トーン選択後の処理
+    if not is_custom_mode:
+        st.session_state['custom_tone_is_set'] = True # 固定トーンは常に「確定」と見なす
+
+# 固定のキャラクター選択時、またはカスタムが確定済みの場合
+if not is_custom_mode:
     selected_char_key = st.session_state['selected_character_key']
     char_desc = CHARACTER_PROMPTS.get(selected_char_key, CHARACTER_PROMPTS["優しさに溢れるメンター (Default)"])["description"]
     st.caption(f"**このメンターのコンセプト:** {char_desc}") 
@@ -469,10 +547,11 @@ def convert_history_to_csv(history_list):
 # ----------------------------------------------------
 
 def clear_input_only():
+    # メインのネガティブ入力のみクリア
     st.session_state["negative_input_key"] = ""
 
 def clear_edit_keys():
-    """編集エリアのキーをリセットするヘルパー関数"""
+    """レビューエリアの編集キーをリセットするヘルパー関数"""
     if "edit_fact_key" in st.session_state:
         del st.session_state["edit_fact_key"]
     if "edit_positive_key" in st.session_state:
@@ -486,8 +565,11 @@ def reset_input():
     clear_input_only()
     st.session_state.current_review_entry = None
     clear_edit_keys() 
-    # カスタム入力エリアをリセットする（念のため）
-    st.session_state['custom_char_input_key'] = "" 
+    # カスタムトーンの見本とフラグをクリアして、カスタム入力に戻れるようにする
+    st.session_state['custom_sample_output'] = None
+    st.session_state['custom_tone_is_set'] = False
+    # カスタム入力の内容自体は保持したままとする
+    # st.session_state['custom_char_input_key'] = "" # これは保持
 
 
 def save_entry():
@@ -561,32 +643,35 @@ def on_convert_click(input_value, custom_input_value):
         clear_input_only() 
 
 # ----------------------------------------------------
-# ユーザーインターフェース (UI)
+# ユーザーインターフェース (UI) - メイン入力は確定時のみ表示
 # ----------------------------------------------------
-st.markdown(f"#### {get_text('INPUT_HEADER')}")
 
-negative_input = st.text_area(
-    get_text("INPUT_PLACEHOLDER"), # ラベルとして利用 
-    height=200,
-    placeholder=get_text("INPUT_PLACEHOLDER"),
-    key="negative_input_key",
-    label_visibility="collapsed" # ラベルを非表示にし、プレースホルダーのみを表示
-)
-
-col1, col2 = st.columns([0.7, 0.3]) 
-
-with col1:
-    st.button(
-        get_text("CONVERT_BUTTON"), 
-        on_click=on_convert_click, 
-        # custom_char_input_value を引数に追加
-        args=[negative_input, custom_char_input_value], 
-        type="primary"
+# カスタムモードではない、またはカスタムモードでトーンが確定している場合のみ表示
+if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
+    
+    st.markdown(f"#### {get_text('INPUT_HEADER')}")
+    
+    negative_input = st.text_area(
+        get_text("INPUT_PLACEHOLDER"), # ラベルとして利用 
+        height=200,
+        placeholder=get_text("INPUT_PLACEHOLDER"),
+        key="negative_input_key",
+        label_visibility="collapsed" # ラベルを非表示にし、プレースホルダーのみを表示
     )
-
-with col2:
-    # トップの「もう一度書き直す」ボタン
-    st.button(get_text("RESET_BUTTON"), on_click=reset_input, key="reset_button_top") 
+    
+    col1, col2 = st.columns([0.7, 0.3]) 
+    
+    with col1:
+        st.button(
+            get_text("CONVERT_BUTTON"), 
+            on_click=on_convert_click, 
+            args=[negative_input, custom_char_input_value], 
+            type="primary"
+        )
+    
+    with col2:
+        # トップの「もう一度書き直す」ボタン
+        st.button(get_text("RESET_BUTTON"), on_click=reset_input, key="reset_button_top") 
 
 # ----------------------------------------------------
 # 変換結果レビューエリア (UIの続き - 編集可能に変更)
@@ -596,13 +681,13 @@ if st.session_state.current_review_entry:
     
     review_entry = st.session_state.current_review_entry
     
-    # ★★★ 修正点: レビューヘッダーにリセットボタンを配置するためのカラムを作成 ★★★
+    # レビューヘッダーにリセットボタンを配置するためのカラムを作成
     review_header_col1, review_header_col2 = st.columns([0.8, 0.2])
     
     with review_header_col1:
         st.subheader(get_text("REVIEW_HEADER"))
     
-    # ★★★ 修正点: レビュー中にもリセットボタンを表示（改善2の適用） ★★★
+    # ★★★ 修正点: レビュー中にもリセットボタンを表示（改善2のロジック） ★★★
     with review_header_col2:
         st.button(
             get_text("RESET_BUTTON"), 
@@ -674,6 +759,7 @@ if st.session_state.current_review_entry:
         )
     
     with discard_col:
+        # 見本生成フローでは「やり直し」ボタンでトーンに戻るため、ここでは「破棄」ボタンを維持
         st.button(
             get_text("DISCARD_BUTTON"), 
             on_click=discard_entry, 
