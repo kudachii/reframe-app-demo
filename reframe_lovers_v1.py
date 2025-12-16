@@ -9,8 +9,42 @@ import time
 # ----------------------------------------------------
 # 1. 多言語対応とセッションステートの初期化 (省略)
 # ----------------------------------------------------
-# ... (GAME_TRANSLATIONS, get_text 関数は省略) ...
-
+GAME_TRANSLATIONS = {
+    "JA": {
+        "TITLE": "Reframe Lovers 〜スタートアップの空の下で〜 (プロトタイプ)",
+        "LANG_SELECT": "言語を選択 / Select Language",
+        "GENDER_SELECT": "主人公の性別を選択",
+        "GENDER_MALE": "男性 (Man)",
+        "GENDER_FEMALE": "女性 (Woman)",
+        "NAME_INPUT": "主人公の名前を入力してください",
+        "CSV_HEADER": "🔗 ポジティブ日記データの連動",
+        "CSV_UPLOAD": "ポジティブ日記の最新のCSVファイルをアップロードしてください",
+        "CSV_HINT": "※このファイルから「自信ゲージ」を計算します。",
+        "LOAD_BUTTON": "データをロードしてゲーム開始",
+        "DATA_ERROR": "⚠️ データエラー：CSVをアップロードするか、ファイルが壊れていないか確認してください。",
+        "DATA_SUCCESS": "✅ データロード成功！",
+        "CONTINUOUS_DAYS": "連続記録日数:",
+        "CONFIDENCE_GAUGE": "現在の自信ゲージ (Confidence):",
+        "START_GAME": "ゲームを開始する ➡️"
+    },
+    "EN": {
+        "TITLE": "Reframe Lovers ~Under the Startup Sky~ (Prototype)",
+        "LANG_SELECT": "Select Language / 言語を選択",
+        "GENDER_SELECT": "Select Player Gender",
+        "GENDER_MALE": "Male",
+        "GENDER_FEMALE": "Female",
+        "NAME_INPUT": "Enter Player Name",
+        "CSV_HEADER": "🔗 Link Positive Diary Data",
+        "CSV_UPLOAD": "Please upload the latest CSV file from your Positive Diary App",
+        "CSV_HINT": "※This file is used to calculate your Confidence Gauge.",
+        "LOAD_BUTTON": "Load Data and Start Game",
+        "DATA_ERROR": "⚠️ Data Error: Please upload a valid CSV file.",
+        "DATA_SUCCESS": "✅ Data Load Successful!",
+        "CONTINUOUS_DAYS": "Continuous Recording Days:",
+        "CONFIDENCE_GAUGE": "Current Confidence Gauge:",
+        "START_GAME": "Start Game ➡️"
+    }
+}
 def get_text(key):
     lang = st.session_state.get('game_language', 'JA')
     return GAME_TRANSLATIONS.get(lang, GAME_TRANSLATIONS['JA']).get(key, f"MISSING TEXT: {key}")
@@ -19,10 +53,10 @@ def get_text(key):
 st.session_state.setdefault('game_language', 'JA')
 st.session_state.setdefault('continuous_days', 0)
 st.session_state.setdefault('game_state', 'START') 
-st.session_session.setdefault('player_gender', 'Female') 
+st.session_state.setdefault('player_gender', 'Female') 
 st.session_state.setdefault('player_name', 'あなた')
 st.session_state.setdefault('confidence_level', 1)
-st.session_state.setdefault('conversation_history', [])
+st.session_state.setdefault('conversation_history', []) # 履歴を蓄積
 st.session_state.setdefault('favor_ryo', 50)
 st.session_state.setdefault(
     'conversation_theme', 
@@ -82,6 +116,7 @@ def generate_conversation_turn(conversation_context):
 
     time.sleep(1.5) 
 
+    # 🚨 ここで、会話のコンテキストに基づいて次の会話が生成される想定です
     if confidence_level >= 3:
         speech = f"{player_name}、まだ残っていたのか。珍しいな。その資料... 深刻な顔をしているが、まさか致命的なミスか？正直に話すべきだ。それが、お前（あなた）の役割だろ。"
         choices = [
@@ -105,9 +140,9 @@ def generate_conversation_turn(conversation_context):
     }
 
 def handle_choice(choice_consequence):
-    """選択肢が選ばれた時の好感度・自信ゲージの処理"""
+    """選択肢が選ばれた時の好感度・自信ゲージの処理と、次のターンへの遷移"""
     
-    # 🚨 修正点: 履歴の pop は行わない。次のロード状態への移行を確実にする。
+    # 🚨 修正点: 会話履歴の操作を削除。好感度更新とステート遷移のみ。
 
     if choice_consequence == "favor_up":
         st.session_state['favor_ryo'] = min(100, st.session_state['favor_ryo'] + 10)
@@ -130,7 +165,6 @@ st.set_page_config(layout="centered", page_title=get_text("TITLE"))
 st.title(get_text("TITLE"))
 
 if st.session_state['game_state'] in ['START', 'DIARY_LOADED']:
-    
     # ... (初期設定UIコードは省略) ...
     LANGUAGES = {"JA": "日本語", "EN": "English"}
     st.session_state['game_language'] = st.selectbox(
@@ -228,7 +262,7 @@ def render_conversation_ui():
 
     chat_container = st.container(height=350)
 
-    # 履歴をすべて表示 (ポップ処理は行わない)
+    # 履歴をすべて表示 
     with chat_container:
         for turn in st.session_state['conversation_history']:
             st.markdown(f"""
@@ -260,14 +294,11 @@ def render_conversation_ui():
     elif st.session_state['game_state'] == 'CONVERSATION_LOAD':
         with st.spinner('氷室 涼が思考中... データ生成中...'):
             
-            # 🚨 修正点: 新しいターンを生成する直前に、会話履歴をリセットする (デバッグ用)
-            # 継続した会話を実現する場合、この行は削除が必要です。
-            st.session_state['conversation_history'] = [] 
-            
+            # 🚨 修正点: 履歴のリセット処理を削除
             new_turn = generate_conversation_turn(st.session_state['conversation_theme']) 
         
         if new_turn:
-            st.session_state['conversation_history'].append(new_turn)
+            st.session_state['conversation_history'].append(new_turn) # 履歴に追加
             st.session_state['game_state'] = 'CONVERSATION'
             st.rerun()
         else:
