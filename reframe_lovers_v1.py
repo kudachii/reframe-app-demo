@@ -4,14 +4,14 @@ import pandas as pd
 import datetime
 import pytz
 import json
-import time
+import time # time.time() を使用するために必要
 
 # ----------------------------------------------------
 # 1. 多言語対応とセッションステートの初期化
 # ----------------------------------------------------
 
+# ... (GAME_TRANSLATIONS, get_text 関数は省略) ...
 GAME_TRANSLATIONS = {
-    # ... (多言語テキストは省略) ...
     "JA": {
         "TITLE": "Reframe Lovers 〜スタートアップの空の下で〜 (プロトタイプ)",
         "LANG_SELECT": "言語を選択 / Select Language",
@@ -66,10 +66,10 @@ st.session_state.setdefault(
 )
 
 # ----------------------------------------------------
-# 2. 連続記録日数を計算するコアロジック (変更なし、省略)
+# 2. 連続記録日数を計算するコアロジック (省略)
 # ----------------------------------------------------
-
 def calculate_streak_from_df(df):
+    # ... (コード省略) ...
     date_column = None
     if '日付' in df.columns:
         date_column = '日付'
@@ -112,25 +112,15 @@ def calculate_streak_from_df(df):
     return streak
 
 # ----------------------------------------------------
-# 3. AI会話生成ロジック (変更なし、省略)
+# 3. AI会話生成ロジック (省略)
 # ----------------------------------------------------
-
 def get_system_instruction(player_name, player_gender, confidence_level):
-    # ... (プロンプト定義関数は省略) ...
+    # ... (コード省略) ...
     gender_tone = "異性の同期兼特別な存在として、クールさの中にふとした瞬間に照れや配慮が垣間見えるトーンを意識してください。" if player_gender == "Female" else "同性のライバル兼特別な存在として、ストレートで仕事の成功を分かち合うトーンを意識してください。"
-        
-    return f"""
-    あなたはゲームの攻略対象キャラクター『氷室 涼（ひむろ りょう）』です。
-    ... (中略) ...
-    自信レベル: {confidence_level} / プレイヤー名: {player_name} / 性別: {player_gender}
-    ... (中略) ...
-    """
+    return f"""... (中略) ..."""
+
 
 def generate_conversation_turn(conversation_context):
-    """
-    Gemini APIを呼び出し、氷室 涼の会話と選択肢をJSONで取得する関数。
-    現在は動作確認のためのモックデータを使用しています。
-    """
     player_name = st.session_state['player_name']
     confidence_level = st.session_state['confidence_level']
 
@@ -183,7 +173,7 @@ st.title(get_text("TITLE"))
 
 if st.session_state['game_state'] in ['START', 'DIARY_LOADED']:
     
-    # --- UI (言語選択、主人公情報入力、CSVアップロード、データロード) のコードは省略 ---
+    # ... (UIコードは省略) ...
     LANGUAGES = {"JA": "日本語", "EN": "English"}
     st.session_state['game_language'] = st.selectbox(
         get_text("LANG_SELECT"), 
@@ -290,8 +280,8 @@ def render_conversation_ui():
             
     current_turn = st.session_state['conversation_history'][-1] if st.session_state['conversation_history'] else None
     
-    # 💡 修正点のために、現在のターンインデックスを取得
     current_turn_index = len(st.session_state['conversation_history']) 
+    unique_session_id = time.time() # 💡 タイムスタンプキーの取得
 
     if st.session_state['game_state'] == 'CONVERSATION' and current_turn:
         
@@ -303,8 +293,7 @@ def render_conversation_ui():
             with cols[i]:
                 st.button(
                     choice['text'], 
-                    # 💡 修正後のキー設定: ターンインデックスと選択肢インデックスを組み合わせて確実に一意にする
-                    key=f"choice_turn{current_turn_index}_{i}", 
+                    key=f"choice_{current_turn_index}_{i}_{unique_session_id}", # 💡 修正後のキー設定
                     on_click=handle_choice, 
                     args=(choice['consequence'],)
                 )
