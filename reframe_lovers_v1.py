@@ -9,42 +9,8 @@ import time
 # ----------------------------------------------------
 # 1. 多言語対応とセッションステートの初期化 (省略)
 # ----------------------------------------------------
-GAME_TRANSLATIONS = {
-    "JA": {
-        "TITLE": "Reframe Lovers 〜スタートアップの空の下で〜 (プロトタイプ)",
-        "LANG_SELECT": "言語を選択 / Select Language",
-        "GENDER_SELECT": "主人公の性別を選択",
-        "GENDER_MALE": "男性 (Man)",
-        "GENDER_FEMALE": "女性 (Woman)",
-        "NAME_INPUT": "主人公の名前を入力してください",
-        "CSV_HEADER": "🔗 ポジティブ日記データの連動",
-        "CSV_UPLOAD": "ポジティブ日記の最新のCSVファイルをアップロードしてください",
-        "CSV_HINT": "※このファイルから「自信ゲージ」を計算します。",
-        "LOAD_BUTTON": "データをロードしてゲーム開始",
-        "DATA_ERROR": "⚠️ データエラー：CSVをアップロードするか、ファイルが壊れていないか確認してください。",
-        "DATA_SUCCESS": "✅ データロード成功！",
-        "CONTINUOUS_DAYS": "連続記録日数:",
-        "CONFIDENCE_GAUGE": "現在の自信ゲージ (Confidence):",
-        "START_GAME": "ゲームを開始する ➡️"
-    },
-    "EN": {
-        "TITLE": "Reframe Lovers ~Under the Startup Sky~ (Prototype)",
-        "LANG_SELECT": "Select Language / 言語を選択",
-        "GENDER_SELECT": "Select Player Gender",
-        "GENDER_MALE": "Male",
-        "GENDER_FEMALE": "Female",
-        "NAME_INPUT": "Enter Player Name",
-        "CSV_HEADER": "🔗 Link Positive Diary Data",
-        "CSV_UPLOAD": "Please upload the latest CSV file from your Positive Diary App",
-        "CSV_HINT": "※This file is used to calculate your Confidence Gauge.",
-        "LOAD_BUTTON": "Load Data and Start Game",
-        "DATA_ERROR": "⚠️ Data Error: Please upload a valid CSV file.",
-        "DATA_SUCCESS": "✅ Data Load Successful!",
-        "CONTINUOUS_DAYS": "Continuous Recording Days:",
-        "CONFIDENCE_GAUGE": "Current Confidence Gauge:",
-        "START_GAME": "Start Game ➡️"
-    }
-}
+# ... (GAME_TRANSLATIONS, get_text 関数は省略) ...
+
 def get_text(key):
     lang = st.session_state.get('game_language', 'JA')
     return GAME_TRANSLATIONS.get(lang, GAME_TRANSLATIONS['JA']).get(key, f"MISSING TEXT: {key}")
@@ -53,7 +19,7 @@ def get_text(key):
 st.session_state.setdefault('game_language', 'JA')
 st.session_state.setdefault('continuous_days', 0)
 st.session_state.setdefault('game_state', 'START') 
-st.session_state.setdefault('player_gender', 'Female') 
+st.session_session.setdefault('player_gender', 'Female') 
 st.session_state.setdefault('player_name', 'あなた')
 st.session_state.setdefault('confidence_level', 1)
 st.session_state.setdefault('conversation_history', [])
@@ -73,7 +39,6 @@ def calculate_streak_from_df(df):
     elif 'Date' in df.columns:
         date_column = 'Date'
     else:
-        # st.error(f"CSVファイルに '日付' または 'Date' カラムが見つかりません。")
         return 0
         
     df = df.dropna(subset=[date_column])
@@ -85,7 +50,6 @@ def calculate_streak_from_df(df):
             infer_datetime_format=True
         ).dt.date
     except Exception as e:
-        # st.error(f"日付形式の解析エラーが発生しました。: {e}")
         return 0
 
     df = df.dropna(subset=['date_only'])
@@ -143,9 +107,7 @@ def generate_conversation_turn(conversation_context):
 def handle_choice(choice_consequence):
     """選択肢が選ばれた時の好感度・自信ゲージの処理"""
     
-    # 🚨 修正点1: 現在の会話ターンを履歴から削除 (次のターン生成を確実にするため)
-    if st.session_state['conversation_history']:
-        st.session_state['conversation_history'].pop() 
+    # 🚨 修正点: 履歴の pop は行わない。次のロード状態への移行を確実にする。
 
     if choice_consequence == "favor_up":
         st.session_state['favor_ryo'] = min(100, st.session_state['favor_ryo'] + 10)
@@ -264,10 +226,9 @@ def render_conversation_ui():
         
     st.markdown("---")
 
-    # 履歴表示エリアの高さ確保
     chat_container = st.container(height=350)
 
-    # 履歴をすべて表示 (ポップ処理はhandle_choiceで行う)
+    # 履歴をすべて表示 (ポップ処理は行わない)
     with chat_container:
         for turn in st.session_state['conversation_history']:
             st.markdown(f"""
@@ -279,7 +240,7 @@ def render_conversation_ui():
     current_turn = st.session_state['conversation_history'][-1] if st.session_state['conversation_history'] else None
     
     current_turn_index = len(st.session_state['conversation_history']) 
-    unique_session_id = time.time() # タイムスタンプキーの取得
+    unique_session_id = time.time() 
 
     if st.session_state['game_state'] == 'CONVERSATION' and current_turn:
         
@@ -298,6 +259,11 @@ def render_conversation_ui():
                 
     elif st.session_state['game_state'] == 'CONVERSATION_LOAD':
         with st.spinner('氷室 涼が思考中... データ生成中...'):
+            
+            # 🚨 修正点: 新しいターンを生成する直前に、会話履歴をリセットする (デバッグ用)
+            # 継続した会話を実現する場合、この行は削除が必要です。
+            st.session_state['conversation_history'] = [] 
+            
             new_turn = generate_conversation_turn(st.session_state['conversation_theme']) 
         
         if new_turn:
