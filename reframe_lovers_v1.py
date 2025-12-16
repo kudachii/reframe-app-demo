@@ -4,14 +4,14 @@ import pandas as pd
 import datetime
 import pytz
 import json
-import time # sleep/spinner用にインポート
+import time
 
 # ----------------------------------------------------
 # 1. 多言語対応とセッションステートの初期化
 # ----------------------------------------------------
 
-# 多言語対応用の静的テキスト定義 (ゲームUI用)
 GAME_TRANSLATIONS = {
+    # ... (多言語テキストは変更なし、省略) ...
     "JA": {
         "TITLE": "Reframe Lovers 〜スタートアップの空の下で〜 (プロトタイプ)",
         "LANG_SELECT": "言語を選択 / Select Language",
@@ -47,29 +47,32 @@ GAME_TRANSLATIONS = {
         "START_GAME": "Start Game ➡️"
     }
 }
-
 def get_text(key):
     lang = st.session_state.get('game_language', 'JA')
     return GAME_TRANSLATIONS.get(lang, GAME_TRANSLATIONS['JA']).get(key, f"MISSING TEXT: {key}")
 
-# セッションステートの初期化を setdefault で簡略化
+# セッションステートの初期化 (変更点: conversation_themeの更新)
 st.session_state.setdefault('game_language', 'JA')
 st.session_state.setdefault('continuous_days', 0)
-st.session_state.setdefault('game_state', 'START') # START / DIARY_LOADED / CONVERSATION_LOAD / CONVERSATION
+st.session_state.setdefault('game_state', 'START') 
 st.session_state.setdefault('player_gender', 'Female') 
 st.session_state.setdefault('player_name', 'あなた')
 st.session_state.setdefault('confidence_level', 1)
-st.session_state.setdefault('conversation_history', []) # 会話履歴
-st.session_state.setdefault('conversation_theme', "オフィスでの新機能開発の課題") # 第1話テーマ
-st.session_state.setdefault('favor_ryo', 50) # 氷室涼の好感度 
+st.session_state.setdefault('conversation_history', [])
+st.session_state.setdefault('favor_ryo', 50)
+
+# ⚠️ Step 3-1: 第1話の具体的なシナリオテーマを適用
+st.session_state.setdefault(
+    'conversation_theme', 
+    "金曜日の終業間際、オフィスの休憩スペースにて。主人公は、自分が担当した重要資料に**致命的なデータミスを発見**し、報告するか黙って修正するか迷っている。氷室は、主人公が資料を前に押し黙っていることに気づき、声をかける。"
+)
 
 # ----------------------------------------------------
-# 2. 連続記録日数を計算するコアロジック (日記アプリと同じ)
+# 2. 連続記録日数を計算するコアロジック (変更なし、省略)
 # ----------------------------------------------------
 
 def calculate_streak_from_df(df):
-    """データフレームから連続記録日数を計算する"""
-    
+    # ... (コード省略。Step 2-2と同じ) ...
     date_column = None
     if '日付' in df.columns:
         date_column = '日付'
@@ -119,16 +122,46 @@ def calculate_streak_from_df(df):
 def get_system_instruction(player_name, player_gender, confidence_level):
     """
     AIに与える氷室 涼のペルソナと制約を定義するゴールデンプロンプト。
-    (この関数は、API呼び出し時に利用されます)
     """
-    # 実際のAPI連携では、この長い文字列をSYSTEM INSTRUCTIONとして渡します。
-    # 簡略化のため、詳細は省略します。
-
+    gender_tone = "異性の同期兼特別な存在として、クールさの中にふとした瞬間に照れや配慮が垣間見えるトーンを意識してください。" if player_gender == "Female" else "同性のライバル兼特別な存在として、ストレートで仕事の成功を分かち合うトーンを意識してください。"
+        
     return f"""
     あなたはゲームの攻略対象キャラクター『氷室 涼（ひむろ りょう）』です。
-    ... (中略) ...
-    自信レベル: {confidence_level} / プレイヤー名: {player_name} / 性別: {player_gender}
-    出力は以下のJSON形式に厳密に従ってください。
+    
+    ## ペルソナ設定
+    - **年齢/職種**: 20代後半 / システム開発部門のエース（主人公の同期）
+    - **性格**: クール、論理的思考、無口。内面は情熱的で努力家。
+    - **口調**: 基本は敬語（～です、～ます）。ただし、主人公の自信レベルが3の場合、タメ口を織り交ぜます。
+    - **トーン調整**: プレイヤーの性別は '{player_gender}' です。{gender_tone}
+
+    ## 制約事項と出力形式
+    1. 会話は、現在のシナリオテーマに基づき、主人公が**「自信」を見せる、またはあなたの論理的な意見に共感**する方向で進めてください。
+    2. 出力は、必ず以下の**厳密なJSON形式**に従ってください。
+    3. **選択肢の調整**: 自信レベルが3 (HIGH) の場合、**大胆でリスクを伴う選択肢**を最低一つ含めてください。
+    
+    ## JSON出力スキーマ (以下の構造に厳密に従うこと)
+    {{
+      "character_name": "氷室 涼",
+      "character_speech": "[氷室のセリフ]",
+      "choices": [
+        {{
+          "text": "[選択肢 1]",
+          "consequence": "confidence_up" or "favor_up" or "neutral" or "favor_down"
+        }},
+        {{
+          "text": "[選択肢 2]",
+          "consequence": "..."
+        }},
+        {{
+          "text": "[選択肢 3]",
+          "consequence": "..."
+        }}
+      ],
+      "current_status": {{
+        "confidence_level": {confidence_level},
+        "player_gender": "{player_gender}"
+      }}
+    }}
     """
 
 def generate_conversation_turn(conversation_context):
@@ -136,34 +169,32 @@ def generate_conversation_turn(conversation_context):
     Gemini APIを呼び出し、氷室 涼の会話と選択肢をJSONで取得する関数。
     現在は動作確認のためのモックデータを使用しています。
     """
-    # 状態の取得
     player_name = st.session_state['player_name']
-    player_gender = st.session_state['player_gender']
     confidence_level = st.session_state['confidence_level']
 
-    # 実際のAPI呼び出しの代わりに、動作確認のためのモックデータを使用
-    time.sleep(1.5) # AIが考えている様子を表現
+    time.sleep(1.5) 
 
+    # ⚠️ Step 3-1 シナリオに合わせたモックデータの調整
     if confidence_level >= 3:
-        speech = f"プロジェクトの進捗報告書を読んだ。{player_name}、正直に言うと、君の判断は**大胆**すぎる。だが、その自信は評価する。次の一手は？"
+        speech = f"{player_name}、まだ残っていたのか。珍しいな。その資料... 深刻な顔をしているが、まさか致命的なミスか？正直に話すべきだ。それが、お前（あなた）の役割だろ。"
         choices = [
-            {"text": "このまま強気で押し通すと断言する (大胆/高リスク)", "consequence": "favor_up"},
-            {"text": "彼の指摘を受け入れ、リスクヘッジ案を提示する", "consequence": "neutral"},
-            {"text": "動揺を隠して、曖昧な返事をする", "consequence": "favor_down"}
+            {"text": "ミスを認め、すぐ上司に報告すると断言する (大胆)", "consequence": "favor_up"},
+            {"text": "黙って修正できると主張し、自分で解決を試みる", "consequence": "favor_down"},
+            {"text": "氷室にだけ、どうすべきか相談してみる", "consequence": "neutral"}
         ]
     else:
-        speech = f"進捗状況は？{player_name}はプレッシャーを感じているようだ。君のペースで構わないが、報告は正確に。"
+        speech = f"{player_name}、進捗状況は？君が何かを隠しているように見える。クライアントへの資料は万全ですか？"
         choices = [
-            {"text": "今の不安な気持ちを正直に相談する", "consequence": "neutral"},
-            {"text": "曖昧な返事で、とりあえずやり過ごす", "consequence": "favor_down"},
-            {"text": "一歩踏み出し、具体的な解決策を提案する", "consequence": "favor_up"}
+            {"text": "資料をもう一度確認すると言って、その場を濁す (消極的)", "consequence": "favor_down"},
+            {"text": "ミスはないと断言し、強がる", "consequence": "neutral"},
+            {"text": "率直にミスを報告すべきか尋ね、氷室の意見を求める", "consequence": "favor_up"}
         ]
 
     return {
         "character_name": "氷室 涼",
         "character_speech": speech,
         "choices": choices,
-        "current_status": {"confidence_level": confidence_level, "player_gender": player_gender}
+        "current_status": {"confidence_level": confidence_level, "player_gender": st.session_state['player_gender']}
     }
 
 def handle_choice(choice_consequence):
@@ -176,11 +207,9 @@ def handle_choice(choice_consequence):
         st.session_state['favor_ryo'] = max(0, st.session_state['favor_ryo'] - 5)
         st.toast("好感度が少し下がってしまいました...", icon='💔')
     elif choice_consequence == "confidence_up":
-        # 好感度を上げる選択肢ではないが、自信が増すケース
         st.session_state['confidence_level'] = min(3, st.session_state['confidence_level'] + 1)
         st.toast("自信が湧いてきました！", icon='✨')
         
-    # 次の会話を生成するため、一時的にロード状態に遷移し、リロード
     st.session_state['game_state'] = 'CONVERSATION_LOAD'
     st.rerun()
 
@@ -192,6 +221,9 @@ st.set_page_config(layout="centered", page_title=get_text("TITLE"))
 st.title(get_text("TITLE"))
 
 if st.session_state['game_state'] in ['START', 'DIARY_LOADED']:
+    
+    # --- UI (言語選択、主人公情報入力、CSVアップロード、データロード) のコードは省略 ---
+    # ... (Step 2-2と同じ内容) ...
     
     # --- 言語選択 ---
     LANGUAGES = {"JA": "日本語", "EN": "English"}
@@ -273,7 +305,7 @@ if st.session_state['game_state'] in ['START', 'DIARY_LOADED']:
         
         # ゲーム開始ボタン
         if st.button(get_text("START_GAME"), type="primary"):
-            st.session_state['game_state'] = 'CONVERSATION_LOAD' # 最初の会話生成をトリガー
+            st.session_state['game_state'] = 'CONVERSATION_LOAD'
             st.rerun()
 
 
@@ -282,7 +314,6 @@ if st.session_state['game_state'] in ['START', 'DIARY_LOADED']:
 def render_conversation_ui():
     """ゲームの会話画面をレンダリングする"""
     
-    # --- UIヘッダー ---
     st.header("💬 Reframe Lovers")
     st.subheader(f"Day 1: 氷室 涼との会話")
     
@@ -294,10 +325,8 @@ def render_conversation_ui():
         
     st.markdown("---")
 
-    # --- 会話履歴の表示エリア（チャットUI風） ---
     chat_container = st.container(height=350)
 
-    # 履歴を逆順にして、新しいものが下に表示されるようにする
     with chat_container:
         for turn in st.session_state['conversation_history']:
             st.markdown(f"""
@@ -306,30 +335,25 @@ def render_conversation_ui():
             </div>
             """, unsafe_allow_html=True)
             
-    # 現在の会話データを取得 (最新のターン)
     current_turn = st.session_state['conversation_history'][-1] if st.session_state['conversation_history'] else None
 
     if st.session_state['game_state'] == 'CONVERSATION' and current_turn:
         
-        # --- 選択肢の表示 ---
         st.markdown("---")
         st.write("➡️ あなたの選択...")
         
-        # 選択肢の数に応じてカラムを分割
         cols = st.columns(len(current_turn['choices']))
         for i, choice in enumerate(current_turn['choices']):
             with cols[i]:
                 st.button(
                     choice['text'], 
-                    key=f"choice_{len(st.session_state['conversation_history'])}_{i}", # キーに履歴の長さを加えて一意性を確保
+                    key=f"choice_{len(st.session_state['conversation_history'])}_{i}",
                     on_click=handle_choice, 
-                    args=(choice['consequence'],) # 好感度への影響を渡す
+                    args=(choice['consequence'],)
                 )
                 
     elif st.session_state['game_state'] == 'CONVERSATION_LOAD':
-        # AIのターンを生成
         with st.spinner('氷室 涼が思考中... データ生成中...'):
-            # generate_conversation_turn 関数を呼び出す
             new_turn = generate_conversation_turn(st.session_state['conversation_theme']) 
         
         if new_turn:
