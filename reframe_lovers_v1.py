@@ -4,13 +4,11 @@ import pandas as pd
 import datetime
 import pytz
 import json
-import time # time.time() を使用するために必要
+import time 
 
 # ----------------------------------------------------
-# 1. 多言語対応とセッションステートの初期化
+# 1. 多言語対応とセッションステートの初期化 (省略)
 # ----------------------------------------------------
-
-# ... (GAME_TRANSLATIONS, get_text 関数は省略) ...
 GAME_TRANSLATIONS = {
     "JA": {
         "TITLE": "Reframe Lovers 〜スタートアップの空の下で〜 (プロトタイプ)",
@@ -69,14 +67,13 @@ st.session_state.setdefault(
 # 2. 連続記録日数を計算するコアロジック (省略)
 # ----------------------------------------------------
 def calculate_streak_from_df(df):
-    # ... (コード省略) ...
     date_column = None
     if '日付' in df.columns:
         date_column = '日付'
     elif 'Date' in df.columns:
         date_column = 'Date'
     else:
-        st.error(f"CSVファイルに '日付' または 'Date' カラムが見つかりません。")
+        # st.error(f"CSVファイルに '日付' または 'Date' カラムが見つかりません。")
         return 0
         
     df = df.dropna(subset=[date_column])
@@ -88,7 +85,7 @@ def calculate_streak_from_df(df):
             infer_datetime_format=True
         ).dt.date
     except Exception as e:
-        st.error(f"日付形式の解析エラーが発生しました。: {e}")
+        # st.error(f"日付形式の解析エラーが発生しました。: {e}")
         return 0
 
     df = df.dropna(subset=['date_only'])
@@ -114,11 +111,6 @@ def calculate_streak_from_df(df):
 # ----------------------------------------------------
 # 3. AI会話生成ロジック (省略)
 # ----------------------------------------------------
-def get_system_instruction(player_name, player_gender, confidence_level):
-    # ... (コード省略) ...
-    gender_tone = "異性の同期兼特別な存在として、クールさの中にふとした瞬間に照れや配慮が垣間見えるトーンを意識してください。" if player_gender == "Female" else "同性のライバル兼特別な存在として、ストレートで仕事の成功を分かち合うトーンを意識してください。"
-    return f"""... (中略) ..."""
-
 
 def generate_conversation_turn(conversation_context):
     player_name = st.session_state['player_name']
@@ -151,6 +143,10 @@ def generate_conversation_turn(conversation_context):
 def handle_choice(choice_consequence):
     """選択肢が選ばれた時の好感度・自信ゲージの処理"""
     
+    # 🚨 修正点1: 現在の会話ターンを履歴から削除 (次のターン生成を確実にするため)
+    if st.session_state['conversation_history']:
+        st.session_state['conversation_history'].pop() 
+
     if choice_consequence == "favor_up":
         st.session_state['favor_ryo'] = min(100, st.session_state['favor_ryo'] + 10)
         st.toast("好感度が少し上がりました！", icon='❤️')
@@ -173,7 +169,7 @@ st.title(get_text("TITLE"))
 
 if st.session_state['game_state'] in ['START', 'DIARY_LOADED']:
     
-    # ... (UIコードは省略) ...
+    # ... (初期設定UIコードは省略) ...
     LANGUAGES = {"JA": "日本語", "EN": "English"}
     st.session_state['game_language'] = st.selectbox(
         get_text("LANG_SELECT"), 
@@ -268,8 +264,10 @@ def render_conversation_ui():
         
     st.markdown("---")
 
+    # 履歴表示エリアの高さ確保
     chat_container = st.container(height=350)
 
+    # 履歴をすべて表示 (ポップ処理はhandle_choiceで行う)
     with chat_container:
         for turn in st.session_state['conversation_history']:
             st.markdown(f"""
@@ -281,7 +279,7 @@ def render_conversation_ui():
     current_turn = st.session_state['conversation_history'][-1] if st.session_state['conversation_history'] else None
     
     current_turn_index = len(st.session_state['conversation_history']) 
-    unique_session_id = time.time() # 💡 タイムスタンプキーの取得
+    unique_session_id = time.time() # タイムスタンプキーの取得
 
     if st.session_state['game_state'] == 'CONVERSATION' and current_turn:
         
@@ -293,7 +291,7 @@ def render_conversation_ui():
             with cols[i]:
                 st.button(
                     choice['text'], 
-                    key=f"choice_{current_turn_index}_{i}_{unique_session_id}", # 💡 修正後のキー設定
+                    key=f"choice_{current_turn_index}_{i}_{unique_session_id}", 
                     on_click=handle_choice, 
                     args=(choice['consequence'],)
                 )
