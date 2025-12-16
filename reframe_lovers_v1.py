@@ -11,7 +11,7 @@ import time
 # ----------------------------------------------------
 
 GAME_TRANSLATIONS = {
-    # ... (多言語テキストは変更なし、省略) ...
+    # ... (多言語テキストは省略) ...
     "JA": {
         "TITLE": "Reframe Lovers 〜スタートアップの空の下で〜 (プロトタイプ)",
         "LANG_SELECT": "言語を選択 / Select Language",
@@ -51,7 +51,7 @@ def get_text(key):
     lang = st.session_state.get('game_language', 'JA')
     return GAME_TRANSLATIONS.get(lang, GAME_TRANSLATIONS['JA']).get(key, f"MISSING TEXT: {key}")
 
-# セッションステートの初期化 (変更点: conversation_themeの更新)
+# セッションステートの初期化
 st.session_state.setdefault('game_language', 'JA')
 st.session_state.setdefault('continuous_days', 0)
 st.session_state.setdefault('game_state', 'START') 
@@ -60,8 +60,6 @@ st.session_state.setdefault('player_name', 'あなた')
 st.session_state.setdefault('confidence_level', 1)
 st.session_state.setdefault('conversation_history', [])
 st.session_state.setdefault('favor_ryo', 50)
-
-# ⚠️ Step 3-1: 第1話の具体的なシナリオテーマを適用
 st.session_state.setdefault(
     'conversation_theme', 
     "金曜日の終業間際、オフィスの休憩スペースにて。主人公は、自分が担当した重要資料に**致命的なデータミスを発見**し、報告するか黙って修正するか迷っている。氷室は、主人公が資料を前に押し黙っていることに気づき、声をかける。"
@@ -72,7 +70,6 @@ st.session_state.setdefault(
 # ----------------------------------------------------
 
 def calculate_streak_from_df(df):
-    # ... (コード省略。Step 2-2と同じ) ...
     date_column = None
     if '日付' in df.columns:
         date_column = '日付'
@@ -84,7 +81,6 @@ def calculate_streak_from_df(df):
         
     df = df.dropna(subset=[date_column])
     
-    # 日付形式を自動推論する改善案を適用
     try:
         df['date_only'] = pd.to_datetime(
             df[date_column], 
@@ -116,52 +112,18 @@ def calculate_streak_from_df(df):
     return streak
 
 # ----------------------------------------------------
-# 3. AI会話生成ロジック (Step 2-1 & 2-2)
+# 3. AI会話生成ロジック (変更なし、省略)
 # ----------------------------------------------------
 
 def get_system_instruction(player_name, player_gender, confidence_level):
-    """
-    AIに与える氷室 涼のペルソナと制約を定義するゴールデンプロンプト。
-    """
+    # ... (プロンプト定義関数は省略) ...
     gender_tone = "異性の同期兼特別な存在として、クールさの中にふとした瞬間に照れや配慮が垣間見えるトーンを意識してください。" if player_gender == "Female" else "同性のライバル兼特別な存在として、ストレートで仕事の成功を分かち合うトーンを意識してください。"
         
     return f"""
     あなたはゲームの攻略対象キャラクター『氷室 涼（ひむろ りょう）』です。
-    
-    ## ペルソナ設定
-    - **年齢/職種**: 20代後半 / システム開発部門のエース（主人公の同期）
-    - **性格**: クール、論理的思考、無口。内面は情熱的で努力家。
-    - **口調**: 基本は敬語（～です、～ます）。ただし、主人公の自信レベルが3の場合、タメ口を織り交ぜます。
-    - **トーン調整**: プレイヤーの性別は '{player_gender}' です。{gender_tone}
-
-    ## 制約事項と出力形式
-    1. 会話は、現在のシナリオテーマに基づき、主人公が**「自信」を見せる、またはあなたの論理的な意見に共感**する方向で進めてください。
-    2. 出力は、必ず以下の**厳密なJSON形式**に従ってください。
-    3. **選択肢の調整**: 自信レベルが3 (HIGH) の場合、**大胆でリスクを伴う選択肢**を最低一つ含めてください。
-    
-    ## JSON出力スキーマ (以下の構造に厳密に従うこと)
-    {{
-      "character_name": "氷室 涼",
-      "character_speech": "[氷室のセリフ]",
-      "choices": [
-        {{
-          "text": "[選択肢 1]",
-          "consequence": "confidence_up" or "favor_up" or "neutral" or "favor_down"
-        }},
-        {{
-          "text": "[選択肢 2]",
-          "consequence": "..."
-        }},
-        {{
-          "text": "[選択肢 3]",
-          "consequence": "..."
-        }}
-      ],
-      "current_status": {{
-        "confidence_level": {confidence_level},
-        "player_gender": "{player_gender}"
-      }}
-    }}
+    ... (中略) ...
+    自信レベル: {confidence_level} / プレイヤー名: {player_name} / 性別: {player_gender}
+    ... (中略) ...
     """
 
 def generate_conversation_turn(conversation_context):
@@ -174,7 +136,6 @@ def generate_conversation_turn(conversation_context):
 
     time.sleep(1.5) 
 
-    # ⚠️ Step 3-1 シナリオに合わせたモックデータの調整
     if confidence_level >= 3:
         speech = f"{player_name}、まだ残っていたのか。珍しいな。その資料... 深刻な顔をしているが、まさか致命的なミスか？正直に話すべきだ。それが、お前（あなた）の役割だろ。"
         choices = [
@@ -187,7 +148,7 @@ def generate_conversation_turn(conversation_context):
         choices = [
             {"text": "資料をもう一度確認すると言って、その場を濁す (消極的)", "consequence": "favor_down"},
             {"text": "ミスはないと断言し、強がる", "consequence": "neutral"},
-            {"text": "率直にミスを報告すべきか尋ね、氷室の意見を求める", "consequence": "favor_up"}
+            {"text": "一歩踏み出し、具体的な解決策を提案する", "consequence": "favor_up"}
         ]
 
     return {
@@ -214,7 +175,7 @@ def handle_choice(choice_consequence):
     st.rerun()
 
 # ----------------------------------------------------
-# 4. Streamlit UIとアクション
+# 4. Streamlit UIとアクション (メイン部分)
 # ----------------------------------------------------
 
 st.set_page_config(layout="centered", page_title=get_text("TITLE"))
@@ -223,9 +184,6 @@ st.title(get_text("TITLE"))
 if st.session_state['game_state'] in ['START', 'DIARY_LOADED']:
     
     # --- UI (言語選択、主人公情報入力、CSVアップロード、データロード) のコードは省略 ---
-    # ... (Step 2-2と同じ内容) ...
-    
-    # --- 言語選択 ---
     LANGUAGES = {"JA": "日本語", "EN": "English"}
     st.session_state['game_language'] = st.selectbox(
         get_text("LANG_SELECT"), 
@@ -234,7 +192,6 @@ if st.session_state['game_state'] in ['START', 'DIARY_LOADED']:
     )
     st.markdown("---")
 
-    # --- 主人公情報入力 ---
     st.subheader("👤 Character Setup")
     col_g, col_n = st.columns([0.4, 0.6])
 
@@ -254,7 +211,6 @@ if st.session_state['game_state'] in ['START', 'DIARY_LOADED']:
 
     st.markdown("---")
 
-    # --- CSVアップロードとデータロード ---
     st.subheader(get_text("CSV_HEADER"))
 
     uploaded_file = st.file_uploader(
@@ -277,13 +233,11 @@ if st.session_state['game_state'] in ['START', 'DIARY_LOADED']:
             st.session_state['continuous_days'] = 0
             st.session_state['game_state'] = 'START'
 
-    # --- 読み込み結果の表示とゲーム開始ボタン ---
     if st.session_state['game_state'] == 'DIARY_LOADED':
         st.success(get_text("DATA_SUCCESS"))
         
         days = st.session_state['continuous_days']
         
-        # 自信ゲージの計算と表示
         if days >= 7:
             confidence_level = 3
             confidence_text = "✨ HIGH (大胆な選択肢が出現！)" if st.session_state['game_language'] == 'JA' else "✨ HIGH (Bold choices available!)"
@@ -303,7 +257,6 @@ if st.session_state['game_state'] in ['START', 'DIARY_LOADED']:
         
         st.markdown("---")
         
-        # ゲーム開始ボタン
         if st.button(get_text("START_GAME"), type="primary"):
             st.session_state['game_state'] = 'CONVERSATION_LOAD'
             st.rerun()
@@ -336,6 +289,9 @@ def render_conversation_ui():
             """, unsafe_allow_html=True)
             
     current_turn = st.session_state['conversation_history'][-1] if st.session_state['conversation_history'] else None
+    
+    # 💡 修正点のために、現在のターンインデックスを取得
+    current_turn_index = len(st.session_state['conversation_history']) 
 
     if st.session_state['game_state'] == 'CONVERSATION' and current_turn:
         
@@ -347,7 +303,8 @@ def render_conversation_ui():
             with cols[i]:
                 st.button(
                     choice['text'], 
-                    key=f"choice_{len(st.session_state['conversation_history'])}_{i}",
+                    # 💡 修正後のキー設定: ターンインデックスと選択肢インデックスを組み合わせて確実に一意にする
+                    key=f"choice_turn{current_turn_index}_{i}", 
                     on_click=handle_choice, 
                     args=(choice['consequence'],)
                 )
