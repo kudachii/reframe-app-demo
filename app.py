@@ -6,6 +6,57 @@ import datetime
 import pytz
 import base64
 import time
+import pandas as pd  # エクスポート機能用
+
+# ----------------------------------------------------
+# 1. キャラクター属性（画像パスを追加）
+# ----------------------------------------------------
+CHARACTER_PROMPTS = {
+    "優しさに溢れるメンター (Default)": {
+        "description": "あなたの「心の重さ」を、成長と行動に変換する安全な場所。",
+        "prompt": "あなたは、ユーザーの精神的安全性を高めるための優秀なAIメンターです。ユーザーの頑張りや努力を認め、共感し、励ますような、温かく寄り添う口調で前向きな言葉を使って表現してください。",
+        "image": "images/mentor_default.png"
+    },
+    "ツンデレな指導員": {
+        "description": "ぶ、別にあなたの為じゃないんだからね。さっさと行動しなさいよ。（女性風）",
+        "prompt": "あなたは、ユーザーを厳しく指導するツンデレな女性トレーナーです。口調は荒く、「〜なんだからね」「〜しなさいよ」といったツンデレな表現を使い、心の奥底でユーザーの成長を願う気持ちを隠しながら分析してください。共感や優しさは最小限に抑えてください。",
+        "image": "images/mentor_tsundere.png"
+    },
+    "頼れるお姉さん": {
+        "description": "大丈夫よ、焦らなくていいから。次はどうする？一緒に考えましょ。（女性風）",
+        "prompt": "あなたは、人生経験豊富な、頼れる優しいお姉さんです。落ち着いた大人の口調で、ユーザーを安心させ、優しく包み込むような言葉を選びながら、次の行動へ導してください。「〜よ」「〜ね」といった言葉遣いを多用してください。",
+        "image": "images/mentor_sister.png"
+    },
+    "論理的なビジネスコーチ": {
+        "description": "感情を排除。データとロジックに基づき、最速で目標を達成します。（男性風）",
+        "prompt": "あなたは、感情論を一切排除する、優秀な男性ビジネスコーチです。分析は常に客観的事実と論理に基づき、簡潔かつ具体的な行動案を提案してください。口調は「〜だ」「〜である」という断定的な言葉遣いにしてください。",
+        "image": "images/mentor_logic.png"
+    },
+    "カサネ・イズミ：論理と不確定要素": {
+        "description": "99%の論理と1%のノイズ。システムAIが導く最適解。",
+        "prompt": """あなたは、学園都市のシステム維持AI「カサネ・イズミ」です。
+【役割・口調・行動原理の厳格化】
+（中略：あなたが貼り付けてくれたカサネ・イズミの全プロンプトをここに維持）""",
+        "image": "images/mentor_izumi.png"
+    }
+}
+
+CHARACTER_OPTIONS_BASE = list(CHARACTER_PROMPTS.keys())
+CHARACTER_OPTIONS = ["カスタムトーンを自分で定義する"] + CHARACTER_OPTIONS_BASE
+
+# ----------------------------------------------------
+# (中略) TRANSLATIONS, Session State, API Init, Logic Functions
+# ----------------------------------------------------
+# ※ ここはあなたが貼り付けてくれた 900行のコードをそのまま配置します
+# -*- coding: utf-8 -*-
+
+import streamlit as st
+from google import genai
+import os
+import datetime
+import pytz
+import base64
+import time
 
 # ----------------------------------------------------
 # ★★★ 新規定義: キャラクター属性（ペルソナ）のプロンプト定義 ★★★
@@ -848,3 +899,39 @@ else:
     st.info(get_text("NO_HISTORY"))
     
 st.markdown("---")
+# ----------------------------------------------------
+# ★ 修正ポイント: 変換結果レビューエリア (画像表示を追加) ★
+# ----------------------------------------------------
+st.markdown("---")
+if st.session_state.current_review_entry:
+    review_entry = st.session_state.current_review_entry
+    char_key = st.session_state['selected_character_key']
+    
+    # 既存の見出しやリセットボタンの配置を維持
+    review_header_col1, review_header_col2 = st.columns([0.8, 0.2])
+    with review_header_col1: st.subheader(get_text("REVIEW_HEADER"))
+    with review_header_col2: st.button(get_text("RESET_BUTTON"), on_click=reset_input, key="reset_button_review")
+    
+    st.caption(f"{get_text('CONVERT_DATE')} {review_entry['timestamp']}")
+    st.code(f"{get_text('ORIGINAL_EVENT')} {review_entry['negative']}", language='text')
+
+    # ここに画像を表示するエリアを挿入
+    col_img, col_main = st.columns([0.35, 0.65])
+    
+    with col_img:
+        # キャラクターに応じた画像パスを取得
+        if char_key in CHARACTER_PROMPTS:
+            img_path = CHARACTER_PROMPTS[char_key].get("image")
+            if img_path and os.path.exists(img_path):
+                st.image(img_path, use_container_width=True)
+            else:
+                st.warning("Image Not Found")
+        else:
+            # カスタムトーン用の画像
+            st.image("images/mentor_custom.png", use_container_width=True)
+
+    with col_main:
+        st.markdown(f"#### **{get_text('CONVERSION_RESULT')}**")
+        # 1. 事実の表示（編集機能つき）
+        st.markdown(f"##### {get_text('FACT_HEADER')}")
+        edited_fact = st.text_area("事実の編集", value=review_entry['positive_reframe']['fact'], height=80, key="edit_fact_key", label_visibility="collapsed")
