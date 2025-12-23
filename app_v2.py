@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 import streamlit as st
 from google import genai
@@ -710,42 +711,41 @@ if st.session_state.last_mentor != current_mentor:
 
     
     # --- A. メンターと対話モード ---
-    # 🔍 デバッグ用（画面に今の選択状態を一時的に出します）
-    # st.write(f"現在の選択: '{menu_selection}'") 
+    # 🔍 デバッグ：今どのメニューが選ばれているか画面に出す（これで原因がわかります）
+    st.info(f"現在のメニュー: {menu_selection}")
 
-    # 条件を「メンター」という文字が含まれているか、に広げます
-    if "メンター" in menu_selection:
+    # 「メンター」という言葉が入っているか、または変数の中身を確認
+    if "メンター" in str(menu_selection):
         current_mentor = st.session_state.get('selected_character_key', '優しさに溢れるメンター (Default)')
         
-        # --- リセット処理 ---
-        if "last_mentor" not in st.session_state:
-            st.session_state.last_mentor = current_mentor
-        if st.session_state.last_mentor != current_mentor:
+        # キャラ変更時のリセット
+        if st.session_state.get('last_mentor') != current_mentor:
             st.session_state.messages = []
             st.session_state.last_mentor = current_mentor
-            st.rerun()
 
-        # --- 表示 ---
+        # タイトル
         st.subheader(f"💬 {current_mentor} とおしゃべり中", anchor=False)
         
+        # チャットログ表示
         chat_container = st.container(height=550)
         with chat_container:
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
 
-        # --- 入力欄（ここが表示されない主因！） ---
-        prompt = st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="chat_input_final")
+        # 入力欄（もし出ないなら、この上の行で止まっています）
+        prompt = st.chat_input("今、どんな気持ち？")
         if prompt:
             st.session_state.messages.append({"role": "user", "content": prompt})
-            # ...（以下、前と同じAI返答の処理）
+            # --- AIの返答 ---
             with st.chat_message("assistant"):
                 safe_char = custom_char_input_value if 'custom_char_input_value' in locals() else ""
                 result = reframe_negative_emotion(prompt, safe_char)
-                response = result.get('full_text', "エラーが発生しました")
+                response = result.get('full_text', "ごめん、もう一度送ってみて！")
                 st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.rerun()
+
     
     # --- B. 過去の日記・レポートモード ---
     else:
