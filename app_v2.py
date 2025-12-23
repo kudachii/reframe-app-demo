@@ -723,21 +723,20 @@ if st.session_state.last_mentor != current_mentor:
 
     # --- 2. チャット画面の表示 ---
     if menu_selection == "💬 メンターと対話":
-        if menu_selection == "💬 メンターと対話":
-        # 1. メンター変更を検知（ここを右に1段ズラすのが重要！）
         current_mentor = st.session_state.get('selected_character_key', '優しさに溢れるメンター (Default)')
         
+        # メンター切り替え時のリセット処理
         if "last_mentor" not in st.session_state:
             st.session_state.last_mentor = current_mentor
-
+        
         if st.session_state.last_mentor != current_mentor:
             st.session_state.messages = []
             st.session_state.last_mentor = current_mentor
-            # リセット直後は再描画して真っさらにする
             st.rerun()
 
-        # 2. チャット画面の表示（2つになるのを防ぐため anchor=False）
+        # タイトル表示（ダブり防止設定）
         st.subheader(f"💬 {current_mentor} とおしゃべり中", anchor=False)
+
         
         chat_container = st.container(height=550)
         with chat_container:
@@ -759,11 +758,6 @@ if st.session_state.last_mentor != current_mentor:
             
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.rerun()
-
-    
-        
-
-
 
     # --- B. 過去の日記・レポートモード ---
     else:
