@@ -710,18 +710,22 @@ if st.session_state.last_mentor != current_mentor:
 
     
     # --- A. メンターと対話モード ---
-    if menu_selection == "💬 メンターと対話":
-        # 1. メンター変更のチェック
+    # 🔍 デバッグ用（画面に今の選択状態を一時的に出します）
+    # st.write(f"現在の選択: '{menu_selection}'") 
+
+    # 条件を「メンター」という文字が含まれているか、に広げます
+    if "メンター" in menu_selection:
         current_mentor = st.session_state.get('selected_character_key', '優しさに溢れるメンター (Default)')
+        
+        # --- リセット処理 ---
         if "last_mentor" not in st.session_state:
             st.session_state.last_mentor = current_mentor
-
         if st.session_state.last_mentor != current_mentor:
             st.session_state.messages = []
             st.session_state.last_mentor = current_mentor
             st.rerun()
 
-        # 2. タイトルとチャット履歴の表示
+        # --- 表示 ---
         st.subheader(f"💬 {current_mentor} とおしゃべり中", anchor=False)
         
         chat_container = st.container(height=550)
@@ -730,24 +734,19 @@ if st.session_state.last_mentor != current_mentor:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
 
-        # 3. 入力欄（★ここが if の中に入っている必要があります！）
-        if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="chat_input_final"):
+        # --- 入力欄（ここが表示されない主因！） ---
+        prompt = st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="chat_input_final")
+        if prompt:
             st.session_state.messages.append({"role": "user", "content": prompt})
-            
+            # ...（以下、前と同じAI返答の処理）
             with st.chat_message("assistant"):
-                with st.spinner(f"{current_mentor}が考え中..."):
-                    # カスタムキャラの入力を考慮
-                    safe_char = custom_char_input_value if 'custom_char_input_value' in locals() else ""
-                    result = reframe_negative_emotion(prompt, safe_char)
-                    response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
-                    st.markdown(response)
-            
+                safe_char = custom_char_input_value if 'custom_char_input_value' in locals() else ""
+                result = reframe_negative_emotion(prompt, safe_char)
+                response = result.get('full_text', "エラーが発生しました")
+                st.markdown(response)
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.rerun()
-
     
- 
-
     # --- B. 過去の日記・レポートモード ---
     else:
         st.header("📚 振り返りルーム")
