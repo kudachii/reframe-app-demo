@@ -662,9 +662,9 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     chat_container = st.container(height=500) # ←ここを追加！
     
     with chat_container: # ←ここを追加！
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
     # 2. チャット入力欄
     if prompt := st.chat_input("今、どんな気持ち？ 愚痴でも何でも吐き出してね。"):
