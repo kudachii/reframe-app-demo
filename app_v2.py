@@ -677,37 +677,49 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     # ----------------------------------------------------
     # タブの作成
     # ----------------------------------------------------
-    tab1, tab2 = st.tabs(["💬 メンターと対話", "📚 過去の日記・レポート"])
+# ----------------------------------------------------
+    # 1. サイドバーにメニューを追加（既存のサイドバーコードの下あたりに）
+    # ----------------------------------------------------
+    st.sidebar.divider()
+    menu_selection = st.sidebar.radio(
+        "📂 メニュー切り替え",
+        ["💬 メンターと対話", "📚 過去の日記・レポート"],
+        index=0,
+        help="画面を切り替えます"
+    )
+    st.sidebar.divider()
 
-    with tab1:
-        # チャットのタイトル
+    # ----------------------------------------------------
+    # 2. 選択されたメニューに応じて画面を表示
+    # ----------------------------------------------------
+    
+    # --- A. メンターと対話モード ---
+    if menu_selection == "💬 メンターと対話":
         st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
         
-        # 枠（コンテナ）を1つだけ作る
-    chat_container = st.container(height=500)
-    with chat_container:
-        # ここで会話を表示（ここ以外でこの処理を書いてはいけません）
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+        # チャット表示エリア
+        chat_container = st.container(height=550)
+        with chat_container:
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
 
-    # 入力欄もここだけ
-    if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="main_chat"):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        # AIの返答処理
-        result = reframe_negative_emotion(prompt, custom_char_input_value)
-        response = result.get('full_text', "ごめん、調子悪いみたい…")
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        st.rerun()
+        # チャット入力欄（画面下部に固定されます）
+        if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="chat_input_v2"):
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            # AIの返答生成
+            result = reframe_negative_emotion(prompt, custom_char_input_value)
+            response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            st.rerun()
+
+    # --- B. 過去の日記・レポートモード ---
+    else:
+        st.header("📚 振り返りルーム")
         
-
-
-      
-
-    with tab2:
-        # --- 月間レポートエリア ---
+        # 月間レポートエリア
         st.subheader(get_text("REPORT_HEADER"))
-        if st.button(get_text("GENERATE_REPORT_BUTTON"), key="report_gen_tab2"):
+        if st.button(get_text("GENERATE_REPORT_BUTTON"), key="report_btn_sidebar"):
             if len(st.session_state.history) < 1: 
                 st.warning(get_text("REPORT_NOT_ENOUGH_DATA"))
             else:
@@ -718,19 +730,18 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
 
         if 'monthly_report' in st.session_state and st.session_state['monthly_report']:
             report = st.session_state['monthly_report']
-            st.markdown(f"#### **{get_text('REPORT_TITLE')}**")
-            st.info(f"**{get_text('REPORT_THEME_HEADER')}**: {report['theme']}")
-            st.success(f"**{get_text('REPORT_SUMMARY_HEADER')}**: {report['summary']}")
-            st.warning(f"**{get_text('REPORT_GOAL_HEADER')}**: {report['goal']}")
-            st.markdown("---")
+            st.info(f"**テーマ**: {report['theme']}\n\n**まとめ**: {report['summary']}\n\n**目標**: {report['goal']}")
 
-        # --- 履歴の表示エリア ---
+        st.divider()
+
+        # 履歴表示エリア
         st.subheader(get_text("HISTORY_HEADER"))
         filter_theme = st.selectbox(
             get_text("FILTER_LABEL"), 
             options=[get_text("ALL_THEMES")] + get_text("THEMES"), 
-            key="history_filter_tab2"
+            key="history_filter_sidebar"
         )
+
         filtered_history = st.session_state.history if filter_theme == get_text("ALL_THEMES") else \
             [entry for entry in st.session_state.history if entry.get('selected_theme') == filter_theme]
 
@@ -738,11 +749,9 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
             for i, entry in enumerate(filtered_history): 
                 with st.expander(f"📌 {entry['timestamp']} | {entry['negative'][:30]}..."):
                     st.markdown(f"**元の出来事:** {entry['negative']}")
-                    st.code(entry['positive_reframe']['fact'], language='text')
-                    st.success(entry['positive_reframe']['positive'])
-                    st.warning(entry['positive_reframe']['action'])
+                    st.success(f"**ポジティブ:** {entry['positive_reframe']['positive']}")
+                    st.warning(f"**次へのアクション:** {entry['positive_reframe']['action']}")
                     st.button(get_text("DELETE_BUTTON"), key=f"del_{entry['timestamp']}", on_click=delete_entry, args=[entry['timestamp']])
         else:
             st.info(get_text("NO_HISTORY"))
-
    
