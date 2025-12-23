@@ -723,45 +723,42 @@ if st.session_state.last_mentor != current_mentor:
 
     # --- 2. チャット画面の表示 ---
     if menu_selection == "💬 メンターと対話":
+        # 1. メンター変更を検知（ここを右に1段ズラすのが重要！）
         current_mentor = st.session_state.get('selected_character_key', '優しさに溢れるメンター (Default)')
         
-        # メンターが切り替わったかチェックして履歴を消す
         if "last_mentor" not in st.session_state:
             st.session_state.last_mentor = current_mentor
-        
+
         if st.session_state.last_mentor != current_mentor:
             st.session_state.messages = []
             st.session_state.last_mentor = current_mentor
+            # リセット直後は再描画して真っさらにする
+            st.rerun()
 
-        # チャットを表示する枠を作る
+        # 2. チャット画面の表示（2つになるのを防ぐため anchor=False）
+        st.subheader(f"💬 {current_mentor} とおしゃべり中", anchor=False)
+        
         chat_container = st.container(height=550)
         with chat_container:
-            # ↓ withの中なので、さらに右に下げます
-            st.markdown(f"### 💬 {current_mentor} とおしゃべり中")
-            st.divider()
-            
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
 
+        # 3. チャット入力（ここも if の中に入れます）
+        if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="chat_input_final"):
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            
+            with st.chat_message("assistant"):
+                with st.spinner(f"{current_mentor}が考え中..."):
+                    # API実行
+                    safe_char = custom_char_input_value if 'custom_char_input_value' in locals() else ""
+                    result = reframe_negative_emotion(prompt, safe_char)
+                    response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
+                    st.markdown(response)
+            
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            st.rerun()
     
-            # 入力欄（これが消えていたはずです）
-            if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="chat_input_final"):
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                
-                with st.chat_message("assistant"):
-                    with st.spinner(f"{current_mentor}が考え中..."):
-                        # API呼び出し
-                        safe_char = custom_char_input_value if 'custom_char_input_value' in locals() else ""
-                        result = reframe_negative_emotion(prompt, safe_char)
-                        response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
-                        
-                        import time
-                        time.sleep(0.5)
-                        st.markdown(response)
-                
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                st.rerun()
         
 
 
