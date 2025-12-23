@@ -693,18 +693,21 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     # 2. 選択されたメニューに応じて画面を表示
     # ----------------------------------------------------
 
-    # 1. 以前選んでいたキャラを覚えておくための準備（最初だけ実行）
-if "last_mentor" not in st.session_state:
-    st.session_state.last_mentor = st.session_state.selected_character_key
+    # 現在のメンター名を取得
 
-# 2. 今選んでいるキャラと、さっきまで選んでいたキャラが違うかチェック
-if st.session_state.last_mentor != st.session_state.selected_character_key:
-    # 違っていたら、会話履歴を空っぽにする！
+current_mentor = st.session_state.get('selected_character_key', '優しさに溢れるメンター (Default)')
+
+# 履歴に保存されている「前回のメンター名」と比較
+if "last_mentor" not in st.session_state:
+    st.session_state.last_mentor = current_mentor
+
+if st.session_state.last_mentor != current_mentor:
+    # 履歴を消して、最新のメンター名を保存
     st.session_state.messages = []
-    # 「今のキャラ」を最新の記憶として保存し直す
-    st.session_state.last_mentor = st.session_state.selected_character_key
-    # 画面を更新してチャット欄をきれいにする
-    st.rerun()
+    st.session_state.last_mentor = current_mentor
+    # ここで rerun をせずに、そのまま下の処理に進ませるのが安全です
+
+
     
     # --- A. メンターと対話モード ---
     if menu_selection == "💬 メンターと対話":
