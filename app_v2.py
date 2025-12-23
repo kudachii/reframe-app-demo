@@ -699,7 +699,7 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
         # 1. 会話を表示するエリア（ここだけに絞る）
         chat_container = st.container(height=550)
         with chat_container:
-            st.markdown(f"### 💬 {st.session_state.get('selected_character_key', 'メンター')} とおしゃべり中")    
+            st.markdown(f"💬 {st.session_state.get('selected_character_key', 'メンター')} とおしゃべり中")    
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
