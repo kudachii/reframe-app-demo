@@ -676,21 +676,7 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     chat_container = st.container(height=500)
     
 
-    # 2. チャット入力欄
-    if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。"):
-        
-        # ユーザーの発言を保存
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        
-        # AIの返答を生成（画面をリフレッシュする前に裏で実行）
-        result = reframe_negative_emotion(prompt, custom_char_input_value)
-        response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
-        
-        # AIの返答を保存
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        
-        # 最後に一回だけリフレッシュ！これで履歴ループが最新の会話を描画します
-        st.rerun()
+
     
 
         # 3. メンターからの返答
@@ -718,12 +704,24 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
         # チャットのタイトル
         st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
         
-        # チャット履歴の表示
-        chat_container = st.container(height=500)
-        with chat_container:
-            for message in st.session_state.messages:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
+        # 枠（コンテナ）を1つだけ作る
+    chat_container = st.container(height=500)
+    with chat_container:
+        # ここで会話を表示（ここ以外でこの処理を書いてはいけません）
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+    # 入力欄もここだけ
+    if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="main_chat"):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        # AIの返答処理
+        result = reframe_negative_emotion(prompt, custom_char_input_value)
+        response = result.get('full_text', "ごめん、調子悪いみたい…")
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.rerun()
+        
+
 
       
 
