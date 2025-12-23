@@ -711,19 +711,17 @@ if st.session_state.last_mentor != current_mentor:
     
     # --- A. メンターと対話モード ---
     if menu_selection == "💬 メンターと対話":
-        # 1. メンター変更を検知（ここを右に1段ズラすのが重要！）
+        # 1. メンター変更のチェック
         current_mentor = st.session_state.get('selected_character_key', '優しさに溢れるメンター (Default)')
-        
         if "last_mentor" not in st.session_state:
             st.session_state.last_mentor = current_mentor
 
         if st.session_state.last_mentor != current_mentor:
             st.session_state.messages = []
             st.session_state.last_mentor = current_mentor
-            # リセット直後は再描画して真っさらにする
             st.rerun()
 
-        # 2. チャット画面の表示（2つになるのを防ぐため anchor=False）
+        # 2. タイトルとチャット履歴の表示
         st.subheader(f"💬 {current_mentor} とおしゃべり中", anchor=False)
         
         chat_container = st.container(height=550)
@@ -732,13 +730,13 @@ if st.session_state.last_mentor != current_mentor:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
 
-        # 3. チャット入力（ここも if の中に入れます）
+        # 3. 入力欄（★ここが if の中に入っている必要があります！）
         if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="chat_input_final"):
             st.session_state.messages.append({"role": "user", "content": prompt})
             
             with st.chat_message("assistant"):
                 with st.spinner(f"{current_mentor}が考え中..."):
-                    # API実行
+                    # カスタムキャラの入力を考慮
                     safe_char = custom_char_input_value if 'custom_char_input_value' in locals() else ""
                     result = reframe_negative_emotion(prompt, safe_char)
                     response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
@@ -746,6 +744,7 @@ if st.session_state.last_mentor != current_mentor:
             
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.rerun()
+
     
  
 
