@@ -675,19 +675,6 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     # 1. 履歴を表示するための専用コンテナ（高さ固定で自動スクロール）
     chat_container = st.container(height=500)
     
-
-
-    
-
-        # 3. メンターからの返答
-        with st.chat_message("assistant"):
-            with st.spinner("聞いてるよ..."):
-                # 既存の関数を使って回答を生成
-                result = reframe_negative_emotion(prompt, custom_char_input_value)
-                
-                # チャット形式に合わせて「ポジティブな側面」をメインに返答
-                response = result['full_text']
-                st.markdown(response)
         
         # メンターの返答も履歴に追加
         st.session_state.messages.append({"role": "assistant", "content": response})
