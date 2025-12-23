@@ -713,34 +713,34 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
 
     # 4. サイドバーにクリアボタンを設置（会話をやり直したい時用）
     st.sidebar.markdown("---")
-
     # ----------------------------------------------------
-    # タブの作成（画面を2つの部屋に分けます）
+    # タブの作成
     # ----------------------------------------------------
-    
     tab1, tab2 = st.tabs(["💬 メンターと対話", "📚 過去の日記・レポート"])
 
     with tab1:
-        # --- ここは今までのチャットUI ---
+        # チャットのタイトル
         st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
         
+        # チャット履歴の表示
         chat_container = st.container(height=500)
         with chat_container:
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
 
+        # チャット入力
         if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。"):
             st.session_state.messages.append({"role": "user", "content": prompt})
             result = reframe_negative_emotion(prompt, custom_char_input_value)
             response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.rerun()
-     with tab2:
-         # --- 月間レポートエリア ---
-        st.subheader(get_text("REPORT_HEADER"))
 
-        if st.button(get_text("GENERATE_REPORT_BUTTON"), key="report_gen_btn"):
+    with tab2:
+        # --- 月間レポートエリア ---
+        st.subheader(get_text("REPORT_HEADER"))
+        if st.button(get_text("GENERATE_REPORT_BUTTON"), key="report_gen_tab2"):
             if len(st.session_state.history) < 1: 
                 st.warning(get_text("REPORT_NOT_ENOUGH_DATA"))
             else:
@@ -757,18 +757,6 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
             st.warning(f"**{get_text('REPORT_GOAL_HEADER')}**: {report['goal']}")
             st.markdown("---")
 
-        # --- エクスポート機能 ---
-        st.markdown(f"#### {get_text('EXPORT_HEADER')}")
-        if st.session_state.history:
-            csv_string = convert_history_to_csv(st.session_state.history)
-            jst = pytz.timezone('Asia/Tokyo')
-            now_jst = datetime.datetime.now(jst).strftime("%Y%m%d_%H%M")
-            file_name = f"Reframe_PositiveDiary_{now_jst}.csv"
-            st.download_button(label=get_text("DOWNLOAD_BUTTON"), data=csv_string, file_name=file_name, mime="text/csv")
-        else:
-            st.info(get_text("NO_EXPORT_DATA"))
-        st.markdown("---")
-
         # --- 履歴の表示エリア ---
         st.subheader(get_text("HISTORY_HEADER"))
         filter_theme = st.selectbox(
@@ -776,7 +764,6 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
             options=[get_text("ALL_THEMES")] + get_text("THEMES"), 
             key="history_filter_tab2"
         )
-
         filtered_history = st.session_state.history if filter_theme == get_text("ALL_THEMES") else \
             [entry for entry in st.session_state.history if entry.get('selected_theme') == filter_theme]
 
@@ -784,10 +771,11 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
             for i, entry in enumerate(filtered_history): 
                 with st.expander(f"📌 {entry['timestamp']} | {entry['negative'][:30]}..."):
                     st.markdown(f"**元の出来事:** {entry['negative']}")
-                    st.markdown(f"**{get_text('FACT_HEADER')}**: {entry['positive_reframe']['fact']}")
-                    st.success(f"**{get_text('POSITIVE_HEADER')}**: {entry['positive_reframe']['positive']}")
-                    st.warning(f"**{get_text('ACTION_HEADER')}**: {entry['positive_reframe']['action']}")
+                    st.code(entry['positive_reframe']['fact'], language='text')
+                    st.success(entry['positive_reframe']['positive'])
+                    st.warning(entry['positive_reframe']['action'])
                     st.button(get_text("DELETE_BUTTON"), key=f"del_{entry['timestamp']}", on_click=delete_entry, args=[entry['timestamp']])
         else:
             st.info(get_text("NO_HISTORY"))
-           
+
+   
