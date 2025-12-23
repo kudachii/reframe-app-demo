@@ -695,50 +695,35 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     # ----------------------------------------------------
 
     # 現在のメンター名を取得
+    current_mentor = st.session_state.get('selected_character_key', '優しさに溢れるメンター (Default)')
 
-current_mentor = st.session_state.get('selected_character_key', '優しさに溢れるメンター (Default)')
+    # 履歴に保存されている「前回のメンター名」と比較
+    if "last_mentor" not in st.session_state:
+        st.session_state.last_mentor = current_mentor
 
-# 履歴に保存されている「前回のメンター名」と比較
-if "last_mentor" not in st.session_state:
-    st.session_state.last_mentor = current_mentor
+        # 履歴を消して、最新のメンター名を保存
+        st.session_state.messages = []
+        st.session_state.last_mentor = current_mentor
+        # ここは rerun しなくても次で新しい messages が使われます
 
-if st.session_state.last_mentor != current_mentor:
-    # 履歴を消して、最新のメンター名を保存
-    st.session_state.messages = []
-    st.session_state.last_mentor = current_mentor
-    # ここで rerun をせずに、そのまま下の処理に進ませるのが安全です
-
-
-    
     # --- A. メンターと対話モード ---
-    # 🔍 デバッグ：今どのメニューが選ばれているか画面に出す（これで原因がわかります）
-    st.info(f"現在のメニュー: {menu_selection}")
-
-    # 「メンター」という言葉が入っているか、または変数の中身を確認
-    if "メンター" in str(menu_selection):
-        current_mentor = st.session_state.get('selected_character_key', '優しさに溢れるメンター (Default)')
-        
-        # キャラ変更時のリセット
-        if st.session_state.get('last_mentor') != current_mentor:
-            st.session_state.messages = []
-            st.session_state.last_mentor = current_mentor
-
-        # タイトル
+    
+    if "メンター" in menu_selection:
+        # ↓ この中身はすべて「if」より右側にズラします
         st.subheader(f"💬 {current_mentor} とおしゃべり中", anchor=False)
         
-        # チャットログ表示
         chat_container = st.container(height=550)
         with chat_container:
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
 
-        # 入力欄（もし出ないなら、この上の行で止まっています）
+        # 入力欄
         prompt = st.chat_input("今、どんな気持ち？")
         if prompt:
             st.session_state.messages.append({"role": "user", "content": prompt})
-            # --- AIの返答 ---
             with st.chat_message("assistant"):
+                # ここで AI 呼び出し
                 safe_char = custom_char_input_value if 'custom_char_input_value' in locals() else ""
                 result = reframe_negative_emotion(prompt, safe_char)
                 response = result.get('full_text', "ごめん、もう一度送ってみて！")
