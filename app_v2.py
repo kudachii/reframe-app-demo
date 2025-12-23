@@ -699,10 +699,10 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
         # 1. 会話を表示するエリア（ここだけに絞る）
         chat_container = st.container(height=550)
         with chat_container:
-        st.markdown(f"### 💬 {st.session_state.get('selected_character_key', 'メンター')} とおしゃべり中")    
-            for message in st.session_state.messages:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
+            st.markdown(f"### 💬 {st.session_state.get('selected_character_key', 'メンター')} とおしゃべり中")    
+                for message in st.session_state.messages:
+                    with st.chat_message(message["role"]):
+                        st.markdown(message["content"])
 
         # 2. チャット入力とAIの返答処理（ここだけに絞る）
         if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="main_chat_final"):
