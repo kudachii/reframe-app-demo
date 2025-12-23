@@ -684,99 +684,52 @@ def convert_history_to_csv(history_list):
 
 
 # ----------------------------------------------------
-# ユーザーインターフェース (UI) - メイン入力は確定時のみ表示
+# 【ポジティブ日記2】チャット・対話インターフェース
 # ----------------------------------------------------
+
+# 会話履歴（記憶）の初期化
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 # カスタムモードではない、またはカスタムモードでトーンが確定している場合のみ表示
 if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     
-    st.markdown(f"#### {get_text('INPUT_HEADER')}")
-    
-    negative_input = st.text_area(
-        get_text("INPUT_PLACEHOLDER"), 
-        height=200,
-        placeholder=get_text("INPUT_PLACEHOLDER"),
-        key="negative_input_key",
-        label_visibility="collapsed"
-    )
-    
-    col1, col2 = st.columns([0.7, 0.3]) 
-    
-    with col1:
-        st.button(
-            get_text("CONVERT_BUTTON"), 
-            on_click=on_convert_click, 
-            args=[negative_input, custom_char_input_value], 
-            type="primary"
-        )
-    
-    with col2:
-        st.button(get_text("RESET_BUTTON"), on_click=reset_input, key="reset_button_top") 
-
-# ----------------------------------------------------
-# 変換結果レビューエリア (UIの続き - 編集可能に変更)
-# ----------------------------------------------------
-st.markdown("---")
-if st.session_state.current_review_entry:
-    
-    review_entry = st.session_state.current_review_entry
-    
-    review_header_col1, review_header_col2 = st.columns([0.8, 0.2])
-    
-    with review_header_col1: st.subheader(get_text("REVIEW_HEADER"))
-    
-    with review_header_col2:
-        st.button(
-            get_text("RESET_BUTTON"), 
-            on_click=reset_input, 
-            key="reset_button_review"
-        )
-    
-    st.caption(f"{get_text('CONVERT_DATE')} {review_entry['timestamp']}")
-    st.code(f"{get_text('ORIGINAL_EVENT')} {review_entry['negative']}", language='text') 
-    
-    st.markdown(f"#### **{get_text('CONVERSION_RESULT')}**")
-    
-    st.markdown(f"##### {get_text('FACT_HEADER')}")
-    edited_fact = st.text_area(
-        "事実の客観視（編集可）", value=review_entry['positive_reframe']['fact'], height=100, key="edit_fact_key", label_visibility="collapsed"
-    )
-
-    st.markdown(f"##### {get_text('POSITIVE_HEADER')}")
-    edited_positive = st.text_area(
-        "ポジティブな側面抽出（編集可）", value=review_entry['positive_reframe']['positive'], height=150, key="edit_positive_key", label_visibility="collapsed"
-    )
-
-    st.markdown(f"##### {get_text('ACTION_HEADER')}")
-    edited_action = st.text_area(
-        "今後の具体的な行動案（編集可）", value=review_entry['positive_reframe']['action'], height=100, key="edit_action_key", label_visibility="collapsed"
-    )
-
-    # 編集結果をセッションステートに反映
-    st.session_state.current_review_entry['positive_reframe']['fact'] = edited_fact
-    st.session_state.current_review_entry['positive_reframe']['positive'] = edited_positive
-    st.session_state.current_review_entry['positive_reframe']['action'] = edited_action
-    
     st.markdown("---")
+    st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
     
-    selected_theme = st.selectbox(
-        get_text("THEME_SELECT_LABEL"), options=get_text("THEMES"), key="theme_selector_key"
-    )
-    st.session_state.current_review_entry['selected_theme'] = selected_theme
-    
-    st.markdown("---")
-    
-    save_col, discard_col = st.columns([0.5, 0.5])
-    
-    with save_col:
-        st.button(get_text("SAVE_BUTTON"), on_click=save_entry, type="primary", key="save_button")
-    
-    with discard_col:
-        st.button(get_text("DISCARD_BUTTON"), on_click=discard_entry, type="secondary", key="discard_button")
+    # 1. これまでの会話履歴を表示
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # 2. チャット入力欄
+    if prompt := st.chat_input("今、どんな気持ち？ 愚痴でも何でも吐き出してね。"):
         
-    st.caption(get_text("SAVE_CAPTION"))
-    st.markdown("---")
+        # ユーザーの発言を履歴に追加・表示
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
+        # 3. メンターからの返答
+        with st.chat_message("assistant"):
+            with st.spinner("聞いてるよ..."):
+                # 既存の関数を使って回答を生成
+                result = reframe_negative_emotion(prompt, custom_char_input_value)
+                
+                # チャット形式に合わせて「ポジティブな側面」をメインに返答
+                response = f"{result['positive']}\n\n💡 **Action:** {result['action']}"
+                st.markdown(response)
+        
+        # メンターの返答も履歴に追加
+        st.session_state.messages.append({"role": "assistant", "content": response})
+
+    # 4. サイドバーにクリアボタンを設置（会話をやり直したい時用）
+    st.sidebar.markdown("---")
+    if st.sidebar.button("チャット履歴をクリア"):
+        st.session_state.messages = []
+        st.rerun()
+
+# ----------------------------------------------------
 
 # ----------------------------------------------------
 # 月間レポートエリア 
