@@ -658,46 +658,32 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     st.markdown("---")
     st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
     
-    # 1. これまでの会話履歴を表示
-    chat_container = st.container(height=500) # ←ここを追加！
+st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
     
-    with chat_container: # ←ここを追加！
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-    # 2. チャット入力欄
-    st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
-    
-    # 1. これまでの会話履歴を表示（コンテナ）
+    # 1. 履歴を表示するための専用コンテナ
     chat_container = st.container(height=500)
     
+    # コンテナの中に「今までの会話」を全部並べる
     with chat_container:
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-    # 2. チャット入力欄
+    # 2. チャット入力欄（コンテナの外に置くのが鉄則）
     if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。"):
         
-        # ユーザーの発言を表示＆保存
-        with chat_container:
-            with st.chat_message("user"):
-                st.markdown(prompt)
+        # ユーザーの発言を保存
         st.session_state.messages.append({"role": "user", "content": prompt})
         
-        # AIの返答を生成
-        with chat_container:
-            with st.chat_message("assistant"):
-                with st.spinner("聞いてるよ..."):
-                    result = reframe_negative_emotion(prompt, custom_char_input_value)
-                    response = result.get('full_text', "ごめん、うまく聞き取れなかったよ。")
-                    st.markdown(response)
+        # AIの返答を即座に生成（画面をリフレッシュする前にやる）
+        result = reframe_negative_emotion(prompt, custom_char_input_value)
+        response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
         
         # AIの返答を保存
         st.session_state.messages.append({"role": "assistant", "content": response})
         
-        # ※ あえて rerun() を外して、まずは「返信が出るか」だけを確認します
+        # 最後に一回だけリフレッシュ！これで履歴ループが最新の会話をコンテナに描画します
+        st.rerun()
 
         # 3. メンターからの返答
         with st.chat_message("assistant"):
