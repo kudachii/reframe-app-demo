@@ -707,6 +707,26 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
         # チャット入力欄（画面下部に固定されます）
         if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="chat_input_v2"):
             st.session_state.messages.append({"role": "user", "content": prompt})
+            # 2. メンターの返答エリア
+        with st.chat_message("assistant"):
+            # 今選んでいるメンターの名前を取得
+            mentor_name = st.session_state.get('selected_character_key', 'メンター')
+            
+            # キャラクター名に合わせてスピナーの文字を変える
+            with st.spinner(f"{mentor_name}が考え中... 💬"):
+                # AIの返答生成
+                result = reframe_negative_emotion(prompt, custom_char_input_value)
+                response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
+                
+                # ここで少しだけ「タメ」を作る（0.5秒〜1秒くらい）
+                import time
+                time.sleep(0.8) 
+                
+                st.markdown(response)
+
+        # 3. AIのメッセージを履歴に保存して更新
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.rerun()
             # AIの返答生成
             result = reframe_negative_emotion(prompt, custom_char_input_value)
             response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
