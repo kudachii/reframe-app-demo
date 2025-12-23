@@ -724,14 +724,6 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
                 
                 st.markdown(response)
 
-        # 3. AIのメッセージを履歴に保存して更新
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        st.rerun()
-            # AIの返答生成
-            result = reframe_negative_emotion(prompt, custom_char_input_value)
-            response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
-            st.session_state.messages.append({"role": "assistant", "content": response})
-            st.rerun()
 
     # --- B. 過去の日記・レポートモード ---
     else:
