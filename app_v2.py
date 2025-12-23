@@ -670,7 +670,7 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
     
     # 1. これまでの会話履歴を表示（コンテナ）
-        chat_container = st.container(height=500)
+    chat_container = st.container(height=500)
     
         with chat_container:
             for message in st.session_state.messages:
