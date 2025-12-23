@@ -717,9 +717,6 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
 
     # 4. サイドバーにクリアボタンを設置（会話をやり直したい時用）
     st.sidebar.markdown("---")
-    if st.sidebar.button("チャット履歴をクリア"):
-        st.session_state.messages = []
-        st.rerun()
         
         # --- ここから追加 ---
         st.divider() # 横線を入れて見やすくします
