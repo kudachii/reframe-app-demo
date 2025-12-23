@@ -669,15 +669,21 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     # 2. チャット入力欄
     if prompt := st.chat_input("今、どんな気持ち？ 愚痴でも何でも吐き出してね。"):
         
-        # ユーザーの発言を保存・表示
+       # ① ユーザーの発言を保存
         st.session_state.messages.append({"role": "user", "content": prompt})
-        # ここで st.rerun() を呼ぶことで、画面が更新されて上のループで正しく表示されます
-        st.rerun()
 
-        # ユーザーの発言を履歴に追加・表示
+       # ② メンター（AI）の返答を生成
+       # 一時的に「考え中...」を表示しながら裏でAIを動かします
+        with st.chat_message("assistant"):
+            with st.spinner("聞いてるよ..."):
+                result = reframe_negative_emotion(prompt, custom_char_input_value)
+                response = result['full_text'] 
+                
+        # ③ AIの返答を保存
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        
+        # ④ 最後に画面を再描画して、コンテナの中に正しく表示させる
+        st.rerun()
 
         # 3. メンターからの返答
         with st.chat_message("assistant"):
