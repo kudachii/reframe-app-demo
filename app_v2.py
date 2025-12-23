@@ -675,11 +675,6 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     # 1. 履歴を表示するための専用コンテナ（高さ固定で自動スクロール）
     chat_container = st.container(height=500)
     
-    # コンテナの中に「今までの会話」を全部並べる
-    with chat_container:
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
 
     # 2. チャット入力欄
     if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。"):
