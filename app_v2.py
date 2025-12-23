@@ -85,6 +85,21 @@ CHARACTER_PROMPTS = {
 CHARACTER_OPTIONS_BASE = list(CHARACTER_PROMPTS.keys())
 CHARACTER_OPTIONS = ["カスタムトーンを自分で定義する"] + CHARACTER_OPTIONS_BASE
 
+# --- ここに差し込む！ ---
+with st.sidebar:
+    st.title("⚙️ 設定・操作")
+    
+    st.subheader("🏁 対話を終える")
+    if st.button("もう十分吐き出した！(ポジティブ変換)", use_container_width=True):
+        st.session_state['ready_to_reframe'] = True
+    
+    st.divider()
+
+    if st.button("チャット履歴をクリア"):
+        st.session_state.messages = []
+        st.rerun()
+# --- ここまで ---
+
 # ----------------------------------------------------
 # 多言語対応用の定義とヘルパー関数
 # ----------------------------------------------------
