@@ -672,15 +672,7 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     # ここから下がチャットUIの本体です（インデントを正確に揃えています）
     # ---------------------------------------------------------------------
     
-    # 1. 履歴を表示するための専用コンテナ（高さ固定で自動スクロール）
-    chat_container = st.container(height=500)
-    
-        
-        # メンターの返答も履歴に追加
-        st.session_state.messages.append({"role": "assistant", "content": response})
-
-    # 4. サイドバーにクリアボタンを設置（会話をやり直したい時用）
-    st.sidebar.markdown("---")
+   
     
     # ----------------------------------------------------
     # タブの作成
