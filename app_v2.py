@@ -692,6 +692,19 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     # ----------------------------------------------------
     # 2. 選択されたメニューに応じて画面を表示
     # ----------------------------------------------------
+
+    # 1. 以前選んでいたキャラを覚えておくための準備（最初だけ実行）
+if "last_mentor" not in st.session_state:
+    st.session_state.last_mentor = st.session_state.selected_character_key
+
+# 2. 今選んでいるキャラと、さっきまで選んでいたキャラが違うかチェック
+if st.session_state.last_mentor != st.session_state.selected_character_key:
+    # 違っていたら、会話履歴を空っぽにする！
+    st.session_state.messages = []
+    # 「今のキャラ」を最新の記憶として保存し直す
+    st.session_state.last_mentor = st.session_state.selected_character_key
+    # 画面を更新してチャット欄をきれいにする
+    st.rerun()
     
     # --- A. メンターと対話モード ---
     if menu_selection == "💬 メンターと対話":
