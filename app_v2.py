@@ -723,6 +723,7 @@ if st.session_state.last_mentor != current_mentor:
 
     # --- 2. チャット画面の表示 ---
     if menu_selection == "💬 メンターと対話":
+        if menu_selection == "💬 メンターと対話":
         # 1. メンター変更を検知（ここを右に1段ズラすのが重要！）
         current_mentor = st.session_state.get('selected_character_key', '優しさに溢れるメンター (Default)')
         
@@ -758,6 +759,7 @@ if st.session_state.last_mentor != current_mentor:
             
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.rerun()
+
     
         
 
