@@ -669,6 +669,11 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     # 2. チャット入力欄
     if prompt := st.chat_input("今、どんな気持ち？ 愚痴でも何でも吐き出してね。"):
         
+        # ユーザーの発言を保存・表示
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        # ここで st.rerun() を呼ぶことで、画面が更新されて上のループで正しく表示されます
+        st.rerun()
+
         # ユーザーの発言を履歴に追加・表示
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
