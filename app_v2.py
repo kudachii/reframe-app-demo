@@ -678,7 +678,7 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
                 result = reframe_negative_emotion(prompt, custom_char_input_value)
                 
                 # チャット形式に合わせて「ポジティブな側面」をメインに返答
-                response = f"{result['positive']}\n\n💡 **Action:** {result['action']}"
+                response = result['full_text']
                 st.markdown(response)
         
         # メンターの返答も履歴に追加
