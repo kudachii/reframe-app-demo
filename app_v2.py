@@ -695,39 +695,37 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     
     # --- A. メンターと対話モード ---
     if menu_selection == "💬 メンターと対話":
-        st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
+        st.markdown(f"### 💬 {st.session_state.get('selected_character_key', 'メンター')} とおしゃべり中")
         
-        # チャット表示エリア
+        # 1. 会話を表示するエリア（ここだけに絞る）
         chat_container = st.container(height=550)
         with chat_container:
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
 
-        # チャット入力欄（画面下部に固定されます）
-    if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="chat_input_v2"):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        
-        with st.chat_message("assistant"):
-            mentor_name = st.session_state.get('selected_character_key', 'メンター')
-            with st.spinner(f"{mentor_name}が考え中... 💬"):
-                
-                # --- ここが修正ポイント！ ---
-                # もし custom_char_input_value が None だったら、空の文字列 "" に置き換える
-                safe_char_setting = custom_char_input_value if custom_char_input_value is not None else ""
-                
-                # 安全な設定を使って API を実行
-                result = reframe_negative_emotion(prompt, safe_char_setting)
-                # --------------------------
-                
-                response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
-                import time
-                time.sleep(0.8) 
-                st.markdown(response)
+        # 2. チャット入力とAIの返答処理（ここだけに絞る）
+        if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="main_chat_final"):
+            # 自分のメッセージを保存
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            
+            # 返答エリアを表示
+            with st.chat_message("assistant"):
+                m_name = st.session_state.get('selected_character_key', 'メンター')
+                with st.spinner(f"{m_name}が考え中..."):
+                    # 安全にAPIを実行
+                    safe_char = custom_char_input_value if custom_char_input_value else ""
+                    result = reframe_negative_emotion(prompt, safe_char)
+                    response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
+                    
+                    import time
+                    time.sleep(0.8)
+                    st.markdown(response)
+            
+            # 履歴に保存して画面をリロード
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            st.rerun()
 
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        st.rerun()
-        
 
     # --- B. 過去の日記・レポートモード ---
     else:
