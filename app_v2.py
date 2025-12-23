@@ -713,6 +713,7 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
 
     # 4. サイドバーにクリアボタンを設置（会話をやり直したい時用）
     st.sidebar.markdown("---")
+    
     # ----------------------------------------------------
     # タブの作成
     # ----------------------------------------------------
@@ -729,13 +730,7 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
 
-        # チャット入力
-        if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。"):
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            result = reframe_negative_emotion(prompt, custom_char_input_value)
-            response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
-            st.session_state.messages.append({"role": "assistant", "content": response})
-            st.rerun()
+      
 
     with tab2:
         # --- 月間レポートエリア ---
