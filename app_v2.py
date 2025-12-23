@@ -737,7 +737,7 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.rerun()
      with tab2:
-        # --- 月間レポートエリア ---
+         # --- 月間レポートエリア ---
         st.subheader(get_text("REPORT_HEADER"))
 
         if st.button(get_text("GENERATE_REPORT_BUTTON"), key="report_gen_btn"):
@@ -790,5 +790,4 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
                     st.button(get_text("DELETE_BUTTON"), key=f"del_{entry['timestamp']}", on_click=delete_entry, args=[entry['timestamp']])
         else:
             st.info(get_text("NO_HISTORY"))
-    
-
+           
