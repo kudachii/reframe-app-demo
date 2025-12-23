@@ -657,10 +657,12 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     
     st.markdown("---")
     st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
+    # ---------------------------------------------------------------------
+    # ここから下がチャットUIの本体です（インデントを正確に揃えています）
+    # ---------------------------------------------------------------------
+    st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
     
-st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
-    
-    # 1. 履歴を表示するための専用コンテナ
+    # 1. 履歴を表示するための専用コンテナ（高さ固定で自動スクロール）
     chat_container = st.container(height=500)
     
     # コンテナの中に「今までの会話」を全部並べる
@@ -669,21 +671,22 @@ st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃ
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-    # 2. チャット入力欄（コンテナの外に置くのが鉄則）
+    # 2. チャット入力欄
     if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。"):
         
         # ユーザーの発言を保存
         st.session_state.messages.append({"role": "user", "content": prompt})
         
-        # AIの返答を即座に生成（画面をリフレッシュする前にやる）
+        # AIの返答を生成（画面をリフレッシュする前に裏で実行）
         result = reframe_negative_emotion(prompt, custom_char_input_value)
         response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
         
         # AIの返答を保存
         st.session_state.messages.append({"role": "assistant", "content": response})
         
-        # 最後に一回だけリフレッシュ！これで履歴ループが最新の会話をコンテナに描画します
+        # 最後に一回だけリフレッシュ！これで履歴ループが最新の会話を描画します
         st.rerun()
+    
 
         # 3. メンターからの返答
         with st.chat_message("assistant"):
