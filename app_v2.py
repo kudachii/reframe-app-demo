@@ -270,15 +270,16 @@ except Exception as e:
 
 
 # ----------------------------------------------------
-# 感情をポジティブに変換する関数 (コア機能) 
+# 感情を「傾聴」して対話する関数 (ポジティブ日記2用)
 # ----------------------------------------------------
 def reframe_negative_emotion(negative_text, custom_input_value):
     
     if client is None:
-        return {"fact": "API未初期化", "positive": "APIキーを設定してください。", "action": "ー"}
+        return {"full_text": "APIキーを設定してください。"}
 
     selected_key = st.session_state.get('selected_character_key', "優しさに溢れるメンター (Default)")
     
+    # キャラクター設定の取得
     if selected_key == "カスタムトーンを自分で定義する" and custom_input_value.strip():
         char_prompt_part = f"あなたは、ユーザーが指定した以下のトーンと役割になりきってください: **{custom_input_value.strip()}**"
     elif selected_key in CHARACTER_PROMPTS:
@@ -286,80 +287,40 @@ def reframe_negative_emotion(negative_text, custom_input_value):
     else:
         char_prompt_part = CHARACTER_PROMPTS["優しさに溢れるメンター (Default)"]["prompt"]
     
+    # 【重要】これまでの会話の流れをAIに教える（5往復分）
+    chat_context = ""
+    if "messages" in st.session_state:
+        for msg in st.session_state.messages[-5:]:
+            role_name = "ユーザー" if msg["role"] == "user" else "メンター"
+            chat_context += f"{role_name}: {msg['content']}\n"
     
     system_prompt = f"""
     {char_prompt_part}
     
-    ユーザーが入力したネガティブな感情や出来事に対し、**入力された言語と同じ言語で**、以下の厳格な3つの形式で分析し、ポジティブな再構築をしてください。
-
-    【出力形式】
-    1. 事実の客観視: (事実のみを簡潔に要約)
-    2. ポジティブな側面抽出: (この出来事からあなたが優しさや強さを得た点、成長できた点を抽出します。前述のキャラクターの口調で表現してください。)
-    3. 今後の具体的な行動案（Next Step）: (小さく、すぐ実行できる次のアクションを一つ提案)
+    【あなたの役割：徹底的な「傾聴」】
+    あなたは今、ユーザーの愚痴や悩みを聞いている最中です。
+    以下のルールを厳守して回答してください：
     
-    必ずこの3つの要素を「1.」「2.」「3.」で始まる形式で出力し、それ以外の説明や挨拶は一切含めないでください。
+    1. **まだ解決策やアドバイス、ポジティブ変換（リフレーム）はしないでください。**
+    2. まずはユーザーの感情を100%肯定し、深く共感してください（例：「それは辛かったね」「マジでムカつくね！」など）。
+    3. ユーザーがさらに気持ちを吐き出せるよう、「それで、どうなったの？」「その時、心の中ではどう思ってた？」と、優しく問いかけてください。
+    4. 「事実・側面・行動」という見出しは**絶対に使わない**でください。自然なチャット形式で答えてください。
+    5. 回答は短めに（100〜150文字程度）、会話を続けることを優先してください。
+
+    これまでの会話の流れ：
+    {chat_context}
     """
     
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[
-                {"role": "user", "parts": [{"text": system_prompt + "\n\n分析対象の出来事:\n" + negative_text}]}
-            ]
+            model="gemini-2.0-flash",
+            contents=[{"role": "user", "parts": [{"text": system_prompt + "\n\n最新のユーザーの発言:\n" + negative_text}]}]
         )
-        raw_text = response.text
-        
-        try:
-            # 正規表現を使わず、分割マーカーでテキストを分割
-            # カサネ・イズミのプロンプトでは、1, 2, 3の前後に感情分析の文章やノイズの文章が入るため、
-            # 信頼性を上げるために、開始マーカーと終了マーカーを厳密に扱う
-            
-            # 1. 事実の客観視（開始）
-            try:
-                # '1. 'の後に続くテキストを抽出
-                fact_match = raw_text.split("1. ", 1)
-                if len(fact_match) > 1:
-                    fact_and_rest = fact_match[1]
-                else:
-                    fact_and_rest = raw_text # '1. 'が見つからない場合は全体を対象
-                
-                # '2. 'の前までを Fact とする
-                positive_match = fact_and_rest.split("2. ", 1)
-                fact = positive_match[0].strip().replace("**", "")
-                
-            except:
-                fact = "分析エラー（Fact抽出失敗）"
-                positive_match = [raw_text, raw_text] # エラー発生時は全体を対象に続行
-            
-            # 2. ポジティブな側面抽出
-            try:
-                # '2. 'の後に続くテキストを抽出
-                positive_and_action = positive_match[1].split("3. ", 1)
-                positive = positive_and_action[0].strip().replace("**", "")
-            except:
-                positive = "分析エラー（Positive抽出失敗）"
-                positive_and_action = [raw_text, raw_text] # エラー発生時は全体を対象に続行
-            
-            # 3. 今後の具体的な行動案（Next Step）
-            try:
-                # '3. 'の後に続くテキストを抽出
-                action = positive_and_action[1].strip().replace("**", "")
-            except:
-                action = "分析エラー（Action抽出失敗）"
-
-
-            return {
-                "fact": fact,
-                "positive": positive,
-                "action": action
-            }
-
-        except Exception:
-            return {"fact": "分析エラー", "positive": raw_text, "action": "分割失敗: AIの出力形式をご確認ください"}
+        # 傾聴モードなので、AIの回答をそのまま1つのテキストとして返します
+        return {"full_text": response.text.strip()}
 
     except Exception as e:
-        return {"fact": "APIエラー", "positive": get_text("API_ERROR_GEMINI") + f"{e}", "action": "ー"}
-        
+        return {"full_text": f"Gemini API実行エラーが発生しました: {e}"}
 # ----------------------------------------------------
 # カスタムトーンのコンセプトを生成する関数
 # ----------------------------------------------------
