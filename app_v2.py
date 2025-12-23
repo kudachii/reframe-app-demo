@@ -365,8 +365,6 @@ def generate_concept(custom_tone_input):
     except Exception:
         return "カスタムコンセプトの生成に失敗しました" if lang == 'JA' else "Failed to generate custom concept"
 
-# ----------------------------------------------------
-
 
 # ----------------------------------------------------
 # リセット、保存、破棄処理用の関数を定義 
@@ -429,7 +427,6 @@ def delete_entry(timestamp_to_delete):
     st.session_state.positive_streak = calculate_streak(st.session_state.history)
     st.session_state['monthly_report'] = None 
     st.toast(get_text("DELETE_TOAST"), icon='🚮')
-# ----------------------------------------------------
 
 
 # 変換ボタンのコールバック関数
@@ -656,7 +653,6 @@ def convert_history_to_csv(history_list):
         row = f"{timestamp},{date_only},{theme},{negative},{fact},{positive},{action}\n"
         csv_data += row
     return csv_data
-# ----------------------------------------------------
 
 
 # ----------------------------------------------------
@@ -717,97 +713,82 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
 
     # 4. サイドバーにクリアボタンを設置（会話をやり直したい時用）
     st.sidebar.markdown("---")
-    
 
-# ----------------------------------------------------
-# 月間レポートエリア 
-# ----------------------------------------------------
-st.subheader(get_text("REPORT_HEADER"))
 
-if st.button(get_text("GENERATE_REPORT_BUTTON")):
-    if len(st.session_state.history) < 1: 
-        st.warning(get_text("REPORT_NOT_ENOUGH_DATA"))
-    else:
-        with st.spinner("月間レポートを生成中..."):
-            theme, summary, goal = generate_monthly_report(st.session_state.history)
-            
-            st.session_state['monthly_report'] = {"theme": theme, "summary": summary, "goal": goal}
-            st.toast(get_text("REPORT_COMPLETED_TOAST"), icon='📈')
+　　 # ----------------------------------------------------
+    # タブの作成（画面を2つの部屋に分けます）
+    # ----------------------------------------------------
+    tab1, tab2 = st.tabs(["💬 メンターと対話", "📚 過去の日記・レポート"])
 
-if 'monthly_report' in st.session_state and st.session_state['monthly_report']:
-    report = st.session_state['monthly_report']
-    st.markdown(f"#### **{get_text('REPORT_TITLE')}**")
-    
-    st.markdown(f"##### {get_text('REPORT_THEME_HEADER')}")
-    st.info(report['theme'])
-    
-    st.markdown(f"##### {get_text('REPORT_SUMMARY_HEADER')}")
-    st.success(report['summary'])
-    
-    st.markdown(f"##### {get_text('REPORT_GOAL_HEADER')}")
-    st.warning(report['goal'])
-    
-    st.markdown("---")
-# ----------------------------------------------------
-
-# ----------------------------------------------------
-# 履歴データのエクスポート機能 
-# ----------------------------------------------------
-st.markdown(f"#### {get_text("EXPORT_HEADER")}")
-
-if st.session_state.history:
-    csv_string = convert_history_to_csv(st.session_state.history)
-    jst = pytz.timezone('Asia/Tokyo')
-    now_jst = datetime.datetime.now(jst).strftime("%Y%m%d_%H%M")
-    file_name = f"Reframe_PositiveDiary_{now_jst}.csv"
-    
-    st.download_button(
-        label=get_text("DOWNLOAD_BUTTON"), data=csv_string, file_name=file_name, mime="text/csv", type="secondary"
-    )
-    st.caption(get_text("EXPORT_CAPTION"))
-else:
-    st.info(get_text("NO_EXPORT_DATA"))
-st.markdown("---")
-# ----------------------------------------------------
-
-# ----------------------------------------------------
-# 履歴の表示エリア (UIの最後)
-# ----------------------------------------------------
-st.subheader(get_text("HISTORY_HEADER"))
-
-filter_theme = st.selectbox(
-    get_text("FILTER_LABEL"), options=[get_text("ALL_THEMES")] + get_text("THEMES"), index=0, key="history_filter_key"
-)
-
-if filter_theme == get_text("ALL_THEMES"):
-    filtered_history = st.session_state.history
-else:
-    filtered_history = [entry for entry in st.session_state.history if entry.get('selected_theme') == filter_theme]
-
-if filtered_history:
-    for i, entry in enumerate(filtered_history): 
-        col_ts, col_del = st.columns([0.8, 0.2])
+    with tab1:
+        # --- ここは今までのチャットUI ---
+        st.markdown(f"### 💬 {st.session_state['selected_character_key']} とおしゃべり中")
         
-        with col_ts:
-            theme_display = entry.get('selected_theme', get_text('THEME_UNKNOWN'))
-            st.caption(f"{get_text('CONVERT_DATE')} {entry['timestamp']} | 🏷️ {get_text('THEME_SELECT_LABEL').split(' ')[0]}: **{theme_display}**")
-        
-        with col_del:
-            # delete_entry関数にタイムスタンプを渡して削除
-            st.button(get_text("DELETE_BUTTON"), key=f"delete_btn_{entry['timestamp']}", on_click=delete_entry, args=[entry['timestamp']])
-            
-        with st.expander(f"**{i+1}. {entry['negative'][:50]}...** (クリックで詳細)"):
-            st.markdown(f"**元の出来事:** {entry['negative']}")
+        chat_container = st.container(height=500)
+        with chat_container:
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+
+        if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。"):
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            result = reframe_negative_emotion(prompt, custom_char_input_value)
+            response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            st.rerun()
+            with tab2:
+        # --- 月間レポートエリア ---
+        st.subheader(get_text("REPORT_HEADER"))
+
+        if st.button(get_text("GENERATE_REPORT_BUTTON"), key="report_gen_btn"):
+            if len(st.session_state.history) < 1: 
+                st.warning(get_text("REPORT_NOT_ENOUGH_DATA"))
+            else:
+                with st.spinner("月間レポートを生成中..."):
+                    theme, summary, goal = generate_monthly_report(st.session_state.history)
+                    st.session_state['monthly_report'] = {"theme": theme, "summary": summary, "goal": goal}
+                    st.toast(get_text("REPORT_COMPLETED_TOAST"), icon='📈')
+
+        if 'monthly_report' in st.session_state and st.session_state['monthly_report']:
+            report = st.session_state['monthly_report']
+            st.markdown(f"#### **{get_text('REPORT_TITLE')}**")
+            st.info(f"**{get_text('REPORT_THEME_HEADER')}**: {report['theme']}")
+            st.success(f"**{get_text('REPORT_SUMMARY_HEADER')}**: {report['summary']}")
+            st.warning(f"**{get_text('REPORT_GOAL_HEADER')}**: {report['goal']}")
             st.markdown("---")
-            st.markdown(f"**{get_text('FACT_HEADER')}**")
-            st.code(entry['positive_reframe']['fact'], language='text')
-            st.markdown(f"**{get_text('POSITIVE_HEADER')}**")
-            st.success(entry['positive_reframe']['positive'])
-            st.markdown(f"**{get_text('ACTION_HEADER')}**")
-            st.warning(entry['positive_reframe']['action'])
-            
+
+        # --- エクスポート機能 ---
+        st.markdown(f"#### {get_text('EXPORT_HEADER')}")
+        if st.session_state.history:
+            csv_string = convert_history_to_csv(st.session_state.history)
+            jst = pytz.timezone('Asia/Tokyo')
+            now_jst = datetime.datetime.now(jst).strftime("%Y%m%d_%H%M")
+            file_name = f"Reframe_PositiveDiary_{now_jst}.csv"
+            st.download_button(label=get_text("DOWNLOAD_BUTTON"), data=csv_string, file_name=file_name, mime="text/csv")
+        else:
+            st.info(get_text("NO_EXPORT_DATA"))
         st.markdown("---")
-else:
-    st.info(get_text("NO_HISTORY"))
+
+        # --- 履歴の表示エリア ---
+        st.subheader(get_text("HISTORY_HEADER"))
+        filter_theme = st.selectbox(
+            get_text("FILTER_LABEL"), 
+            options=[get_text("ALL_THEMES")] + get_text("THEMES"), 
+            key="history_filter_tab2"
+        )
+
+        filtered_history = st.session_state.history if filter_theme == get_text("ALL_THEMES") else \
+            [entry for entry in st.session_state.history if entry.get('selected_theme') == filter_theme]
+
+        if filtered_history:
+            for i, entry in enumerate(filtered_history): 
+                with st.expander(f"📌 {entry['timestamp']} | {entry['negative'][:30]}..."):
+                    st.markdown(f"**元の出来事:** {entry['negative']}")
+                    st.markdown(f"**{get_text('FACT_HEADER')}**: {entry['positive_reframe']['fact']}")
+                    st.success(f"**{get_text('POSITIVE_HEADER')}**: {entry['positive_reframe']['positive']}")
+                    st.warning(f"**{get_text('ACTION_HEADER')}**: {entry['positive_reframe']['action']}")
+                    st.button(get_text("DELETE_BUTTON"), key=f"del_{entry['timestamp']}", on_click=delete_entry, args=[entry['timestamp']])
+        else:
+            st.info(get_text("NO_HISTORY"))
     
-st.markdown("---")
+
