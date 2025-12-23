@@ -723,16 +723,27 @@ if st.session_state.last_mentor != current_mentor:
 
     # --- 2. チャット画面の表示 ---
     if menu_selection == "💬 メンターと対話":
-        # タイトルを枠の中に入れて「2つになる問題」も解決！
-            chat_container = st.container(height=550)
-            with chat_container:
-                st.markdown(f"### 💬 {current_mentor} とおしゃべり中")
-                st.divider()
-                
-                # 履歴の表示
-                for message in st.session_state.messages:
-                    with st.chat_message(message["role"]):
-                        st.markdown(message["content"])
+        current_mentor = st.session_state.get('selected_character_key', '優しさに溢れるメンター (Default)')
+        
+        # メンターが切り替わったかチェックして履歴を消す
+        if "last_mentor" not in st.session_state:
+            st.session_state.last_mentor = current_mentor
+        
+        if st.session_state.last_mentor != current_mentor:
+            st.session_state.messages = []
+            st.session_state.last_mentor = current_mentor
+
+        # チャットを表示する枠を作る
+        chat_container = st.container(height=550)
+        with chat_container:
+            # ↓ withの中なので、さらに右に下げます
+            st.markdown(f"### 💬 {current_mentor} とおしゃべり中")
+            st.divider()
+            
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+
     
             # 入力欄（これが消えていたはずです）
             if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="chat_input_final"):
