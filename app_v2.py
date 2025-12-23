@@ -736,7 +736,7 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
             response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.rerun()
-            with tab2:
+     with tab2:
         # --- 月間レポートエリア ---
         st.subheader(get_text("REPORT_HEADER"))
 
