@@ -673,11 +673,8 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
         st.session_state.messages.append({"role": "user", "content": prompt})
 
        # ② メンター（AI）の返答を生成
-       # 一時的に「考え中...」を表示しながら裏でAIを動かします
-        with st.chat_message("assistant"):
-            with st.spinner("聞いてるよ..."):
-                result = reframe_negative_emotion(prompt, custom_char_input_value)
-                response = result['full_text'] 
+        result = reframe_negative_emotion(prompt, custom_char_input_value)
+        response = result.get('full_text', "ごめん、うまく聞き取れなかったよ。もう一度教えて？")
                 
         # ③ AIの返答を保存
         st.session_state.messages.append({"role": "user", "content": prompt})
