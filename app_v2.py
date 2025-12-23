@@ -711,36 +711,48 @@ if st.session_state.last_mentor != current_mentor:
     
     # --- A. メンターと対話モード ---
     if menu_selection == "💬 メンターと対話":
-        
-        # 1. 会話を表示するエリア（ここだけに絞る）
+        # --- 1. キャラ変更のリセット判定（ここに入れるのが一番安全です） ---
+    current_mentor = st.session_state.get('selected_character_key', '優しさに溢れるメンター (Default)')
+    if "last_mentor" not in st.session_state:
+        st.session_state.last_mentor = current_mentor
+
+    if st.session_state.last_mentor != current_mentor:
+        st.session_state.messages = []  # 履歴をクリア
+        st.session_state.last_mentor = current_mentor
+        # ここで rerun しなくても、下の処理で新しい空の messages が使われます
+
+    # --- 2. チャット画面の表示 ---
+    if menu_selection == "💬 メンターと対話":
+        # タイトルを枠の中に入れて「2つになる問題」も解決！
         chat_container = st.container(height=550)
         with chat_container:
-           
+            st.markdown(f"### 💬 {current_mentor} とおしゃべり中")
+            st.divider()
+            
+            # 履歴の表示
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
 
-        # 2. チャット入力とAIの返答処理（ここだけに絞る）
-        if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="main_chat_final"):
-            # 自分のメッセージを保存
+        # 入力欄（これが消えていたはずです）
+        if prompt := st.chat_input("今、どんな気持ち？ 吐き出してみて。", key="chat_input_final"):
             st.session_state.messages.append({"role": "user", "content": prompt})
             
-            # 返答エリアを表示
             with st.chat_message("assistant"):
-                m_name = st.session_state.get('selected_character_key', 'メンター')
-                with st.spinner(f"{m_name}が考え中..."):
-                    # 安全にAPIを実行
-                    safe_char = custom_char_input_value if custom_char_input_value else ""
+                with st.spinner(f"{current_mentor}が考え中..."):
+                    # API呼び出し
+                    safe_char = custom_char_input_value if 'custom_char_input_value' in locals() else ""
                     result = reframe_negative_emotion(prompt, safe_char)
                     response = result.get('full_text', "ごめん、ちょっと調子が悪いみたい…")
                     
                     import time
-                    time.sleep(0.8)
+                    time.sleep(0.5)
                     st.markdown(response)
             
-            # 履歴に保存して画面をリロード
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.rerun()
+        
+
 
 
     # --- B. 過去の日記・レポートモード ---
