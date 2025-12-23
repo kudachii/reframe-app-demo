@@ -705,6 +705,15 @@ if not is_custom_mode or st.session_state.get('custom_tone_is_set'):
     if st.sidebar.button("チャット履歴をクリア"):
         st.session_state.messages = []
         st.rerun()
+        
+        # --- ここから追加 ---
+        st.divider() # 横線を入れて見やすくします
+        st.subheader("🏁 対話を終えて日記に保存")
+        
+        # ボタンを押すと、フラグを立てる
+        if st.button("もう十分吐き出した！(ポジティブ変換開始)", use_container_width=True):
+            st.session_state['ready_to_reframe'] = True
+        # --- ここまで追加 ---
 
 # ----------------------------------------------------
 
